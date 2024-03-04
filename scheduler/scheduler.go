@@ -42,6 +42,7 @@ import (
 	"d7y.io/dragonfly/v2/pkg/net/ip"
 	pkgredis "d7y.io/dragonfly/v2/pkg/redis"
 	"d7y.io/dragonfly/v2/pkg/rpc"
+	inferenceclient "d7y.io/dragonfly/v2/pkg/rpc/inference/client"
 	managerclient "d7y.io/dragonfly/v2/pkg/rpc/manager/client"
 	securityclient "d7y.io/dragonfly/v2/pkg/rpc/security/client"
 	trainerclient "d7y.io/dragonfly/v2/pkg/rpc/trainer/client"
@@ -83,6 +84,9 @@ type Server struct {
 
 	// Trainer client.
 	trainerClient trainerclient.V1
+
+	// Inference client.
+	inferenceClient inferenceclient.V1
 
 	// Resource interface.
 	resource resource.Resource
@@ -258,7 +262,9 @@ func New(ctx context.Context, cfg *config.Config, d dfpath.Dfpath) (*Server, err
 		}
 	}
 
-	// Initialize options of evaluator.
+	// Initialize options for evaluator.
+	evaluatorOptions := []evaluator.EvaluatorOption{}
+	// Initialize options of network topology evaluator.
 	evaluatorNetworkTopologyOptions := []evaluator.NetworkTopologyOption{}
 	// Initialize network topology service.
 	if cfg.Scheduler.Algorithm == evaluator.NetworkTopologyAlgorithm {
@@ -270,9 +276,45 @@ func New(ctx context.Context, cfg *config.Config, d dfpath.Dfpath) (*Server, err
 
 		evaluatorNetworkTopologyOptions = append(evaluatorNetworkTopologyOptions, evaluator.WithNetworkTopology(s.networkTopology))
 	}
+	evaluatorOptions = append(evaluatorOptions, evaluator.WithNetworkTopologyOption(evaluatorNetworkTopologyOptions))
+
+	// Initialize options of machine learning evaluator.
+	evaluatorMachineLearningOptions := []evaluator.MachineLearningOption{}
+	// Initialize machine learning service.
+	if cfg.Scheduler.Algorithm == evaluator.MachineLearningAlgorithm {
+		cache := cache.New(cfg.Scheduler.NetworkTopology.Cache.TTL, cfg.Scheduler.NetworkTopology.Cache.Interval)
+		s.networkTopology, err = networktopology.NewNetworkTopology(cfg.Scheduler.NetworkTopology, rdb, cache, resource, s.storage)
+		if err != nil {
+			return nil, err
+		}
+
+		evaluatorMachineLearningOptions = append(evaluatorMachineLearningOptions, evaluator.WithNetworkTopologyInMachineLearning(s.networkTopology))
+
+		// Initialize inference service.
+		inferenceDialOptions := []grpc.DialOption{}
+		if cfg.Security.AutoIssueCert {
+			clientTransportCredentials, err := rpc.NewClientCredentials(cfg.Security.TLSPolicy, nil, []byte(cfg.Security.CACert))
+			if err != nil {
+				return nil, err
+			}
+
+			inferenceDialOptions = append(inferenceDialOptions, grpc.WithTransportCredentials(clientTransportCredentials))
+		} else {
+			inferenceDialOptions = append(inferenceDialOptions, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		}
+
+		// Initialize inference client.
+		s.inferenceClient, err = inferenceclient.GetV1(ctx, cfg.Trainer.InferenceAddr, inferenceDialOptions...)
+		if err != nil {
+			return nil, err
+		}
+
+		evaluatorMachineLearningOptions = append(evaluatorMachineLearningOptions, evaluator.WithInferenceClient(s.inferenceClient))
+	}
+	evaluatorOptions = append(evaluatorOptions, evaluator.WithMachineLearningOption(evaluatorMachineLearningOptions))
 
 	// Initialize scheduling.
-	scheduling := scheduling.New(&cfg.Scheduler, dynconfig, d.PluginDir(), evaluatorNetworkTopologyOptions...)
+	scheduling := scheduling.New(&cfg.Scheduler, dynconfig, d.PluginDir(), evaluatorOptions...)
 
 	// Initialize server options of scheduler grpc server.
 	schedulerServerOptions := []grpc.ServerOption{}

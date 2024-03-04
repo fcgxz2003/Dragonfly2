@@ -32,8 +32,8 @@ const (
 	// NetworkTopologyAlgorithm is a scheduling algorithm based on rules and network topology.
 	NetworkTopologyAlgorithm = "nt"
 
-	// MLAlgorithm is a machine learning scheduling algorithm.
-	MLAlgorithm = "ml"
+	// MachineLearningAlgorithm is a machine learning scheduling algorithm.
+	MachineLearningAlgorithm = "ml"
 
 	// PluginAlgorithm is a scheduling algorithm based on plugin extension.
 	PluginAlgorithm = "plugin"
@@ -70,20 +70,46 @@ type Evaluator interface {
 }
 
 // evaluator is an implementation of Evaluator.
-type evaluator struct{}
+type evaluator struct {
+	networkTopologyOptions []NetworkTopologyOption
+	machineLearningOptions []MachineLearningOption
+}
+
+// EvaluatorOption is a functional option for configuring the evaluator.
+type EvaluatorOption func(e *evaluator)
+
+// WithNetworkTopologyOption sets the network topology option.
+func WithNetworkTopologyOption(networkTopologyOption []NetworkTopologyOption) EvaluatorOption {
+	return func(e *evaluator) {
+		e.networkTopologyOptions = networkTopologyOption
+	}
+}
+
+// WithMachineLearningOption sets the machine learning option.
+func WithMachineLearningOption(machineLearningOption []MachineLearningOption) EvaluatorOption {
+	return func(e *evaluator) {
+		e.machineLearningOptions = machineLearningOption
+	}
+}
 
 // New returns a new Evaluator.
-func New(algorithm string, pluginDir string, networkTopologyOptions ...NetworkTopologyOption) Evaluator {
+func New(algorithm string, pluginDir string, evaluatorOptions ...EvaluatorOption) Evaluator {
+	e := &evaluator{}
+	for _, opt := range evaluatorOptions {
+		opt(e)
+	}
+
 	switch algorithm {
 	case PluginAlgorithm:
 		if plugin, err := LoadPlugin(pluginDir); err == nil {
 			return plugin
 		}
-	case NetworkTopologyAlgorithm:
-		return newEvaluatorNetworkTopology(networkTopologyOptions...)
-	// TODO Implement MLAlgorithm.
-	case MLAlgorithm, DefaultAlgorithm:
+	case DefaultAlgorithm:
 		return newEvaluatorBase()
+	case NetworkTopologyAlgorithm:
+		return newEvaluatorNetworkTopology(e.networkTopologyOptions...)
+	case MachineLearningAlgorithm:
+		return newEvaluatorMachineLearning(e.machineLearningOptions...)
 	}
 
 	return newEvaluatorBase()

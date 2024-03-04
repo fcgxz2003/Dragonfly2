@@ -373,6 +373,9 @@ type TrainerConfig struct {
 	// Addr is trainer service address.
 	Addr string `yaml:"addr" mapstructure:"addr"`
 
+	// InferenceAddr is inference service address.
+	InferenceAddr string `yaml:"inferenceAddr" mapstructure:"inferenceAddr"`
+
 	// Interval is the interval of training.
 	Interval time.Duration `yaml:"interval" mapstructure:"interval"`
 
@@ -481,6 +484,7 @@ func New() *Config {
 		Trainer: TrainerConfig{
 			Enable:        false,
 			Addr:          DefaultTrainerAddr,
+			InferenceAddr: DefaultTrainerInferenceAddr,
 			Interval:      DefaultTrainerInterval,
 			UploadTimeout: DefaultTrainerUploadTimeout,
 		},
@@ -672,6 +676,10 @@ func (cfg *Config) Validate() error {
 	if cfg.Trainer.Enable {
 		if cfg.Trainer.Addr == "" {
 			return errors.New("trainer requires parameter addr")
+		}
+
+		if cfg.Trainer.InferenceAddr == "" {
+			return errors.New("trainer requires parameter inferenceAddr")
 		}
 
 		if cfg.Trainer.Interval <= 0 {
