@@ -358,7 +358,7 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, defaultAggregationNumber, 32},
 		},
 		{
-			Name:     "sr",
+			Name:     "src",
 			Datatype: "FP64",
 			Shape:    []int64{int64(len(parents)), 32},
 		},
