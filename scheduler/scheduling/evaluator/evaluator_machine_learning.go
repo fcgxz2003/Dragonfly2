@@ -21,6 +21,7 @@ import (
 	"encoding/binary"
 	"math"
 	"math/big"
+	"math/rand"
 	"net"
 	"sort"
 	"strings"
@@ -268,57 +269,108 @@ func (e *evaluatorMachineLearning) IsBadNode(peer *resource.Peer) bool {
 
 func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *resource.Peer) ([]float64, error) {
 	// Find the aggregation hosts for child.
-	childNeighbours, err := e.networkTopology.Neighbours(child.Host, defaultAggregationNumber)
+	childFirstOrderNeighbours, childSecondOrderNeighbours, err := e.aggregationHosts(child.Host)
 	if err != nil {
 		return []float64{}, err
 	}
 
-	childNeighboursNeighbours := make([][]*resource.Host, 0, defaultAggregationNumber)
-	for _, childNeighbour := range childNeighbours {
-		neighbourNeighbours, err := e.networkTopology.Neighbours(childNeighbour, defaultAggregationNumber)
-		if err != nil {
-			return []float64{}, err
-		}
-
-		childNeighboursNeighbours = append(childNeighboursNeighbours, neighbourNeighbours)
+	// Generate feature vector for child and its aggregation hosts.
+	childIPFeature := parseIP(child.Host.IP)
+	childNegIPFeatures := make([][]float64, 0, defaultAggregationNumber)
+	for _, childFirstOrderNeighbour := range childFirstOrderNeighbours {
+		childNegIPFeatures = append(childNegIPFeatures, parseIP(childFirstOrderNeighbour.IP))
 	}
 
-	// Generate feature vector for child and its aggregation hosts.
-	// childFeatures := parseIP(child.Host.IP)
+	childNegNegIPFeatures := make([][][]float64, 0, defaultAggregationNumber)
+	for _, childSecondOrderNeighbour := range childSecondOrderNeighbours {
+		ipFeature := make([][]float64, 0, defaultAggregationNumber)
+		for _, host := range childSecondOrderNeighbour {
+			ipFeature = append(ipFeature, parseIP(host.IP))
+		}
+
+		childNegNegIPFeatures = append(childNegNegIPFeatures, ipFeature)
+	}
+
+	var (
+		srcFeature       = make([][]float64, 0, len(parents))
+		srcNegFeature    = make([][][]float64, 0, len(parents))
+		srcNegNegFeature = make([][][][]float64, 0, len(parents))
+	)
+
+	// Map the features of each child to each parent.
+	for i, _ := range parents {
+		srcFeature[i] = childIPFeature
+		srcNegFeature[i] = childNegIPFeatures
+		srcNegNegFeature[i] = childNegNegIPFeatures
+	}
 
 	// Find the aggregation hosts for parents.
-	parentsNeighbours := make([][]*resource.Host, 0, defaultAggregationNumber)
-	parentsNeighboursNeighbours := make([][][]*resource.Host, 0, defaultAggregationNumber)
+	parentsFirstOrderNeighbours := make([][]*resource.Host, 0, defaultAggregationNumber)
+	parentsSecondOrderNeighbours := make([][][]*resource.Host, 0, defaultAggregationNumber)
 	for _, parent := range parents {
-		neighbours, err := e.networkTopology.Neighbours(parent.Host, defaultAggregationNumber)
+		parentFirstOrderNeighbours, parentSecondOrderNeighbours, err := e.aggregationHosts(parent.Host)
 		if err != nil {
 			return []float64{}, err
 		}
-		parentsNeighbours = append(parentsNeighbours, neighbours)
 
-		parentNeighbourNeighbours := make([][]*resource.Host, 0, defaultAggregationNumber)
-		for _, neighbour := range neighbours {
-			neighbourNeighbours, err := e.networkTopology.Neighbours(neighbour, defaultAggregationNumber)
-			if err != nil {
-				return []float64{}, err
-			}
-
-			parentNeighbourNeighbours = append(parentNeighbourNeighbours, neighbourNeighbours)
-		}
-		parentsNeighboursNeighbours = append(parentsNeighboursNeighbours, parentNeighbourNeighbours)
+		parentsFirstOrderNeighbours = append(parentsFirstOrderNeighbours, parentFirstOrderNeighbours)
+		parentsSecondOrderNeighbours = append(parentsSecondOrderNeighbours, parentSecondOrderNeighbours)
 	}
 
 	// Generate feature vector for parents and theirs aggregation hosts.
-	fakeInput := make([][]float64, 0)
-	for i := 0; i < len(parents); i++ {
-		fakeInput = append(fakeInput, []float64{0.5, 0.5, 0.5, 0.5, 0.8})
+	var (
+		destFeature       = make([][]float64, 0, len(parents))
+		destNegFeature    = make([][][]float64, 0, len(parents))
+		destNegNegFeature = make([][][][]float64, 0, len(parents))
+	)
+
+	for i, parent := range parents {
+		destFeature[i] = parseIP(parent.Host.IP)
+
+		for _, parentFirstOrderNeighbours := range parentsFirstOrderNeighbours[i] {
+			destNegFeature[i] = append(destNegFeature[i], parseIP(parentFirstOrderNeighbours.IP))
+		}
+
+		for _, parentSecondOrderNeighbours := range parentsSecondOrderNeighbours[i] {
+			ipFeature := make([][]float64, 0, defaultAggregationNumber)
+			for _, host := range parentSecondOrderNeighbours {
+				ipFeature = append(ipFeature, parseIP(host.IP))
+			}
+
+			destNegNegFeature[i] = append(destNegNegFeature[i], ipFeature)
+		}
 	}
 
 	inferInputs := []*triton.ModelInferRequest_InferInputTensor{
 		{
-			Name:     "inputs",
+			Name:     "dst",
 			Datatype: "FP64",
-			Shape:    []int64{int64(len(parents)), 5},
+			Shape:    []int64{int64(len(parents)), 32},
+		},
+		{
+			Name:     "dst_neg",
+			Datatype: "FP64",
+			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, 32},
+		},
+		{
+			Name:     "dst_neg_neg",
+			Datatype: "FP64",
+			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, defaultAggregationNumber, 32},
+		},
+		{
+			Name:     "sr",
+			Datatype: "FP64",
+			Shape:    []int64{int64(len(parents)), 32},
+		},
+		{
+			Name:     "src_neg",
+			Datatype: "FP64",
+			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, 32},
+		},
+		{
+			Name:     "src_neg_neg",
+			Datatype: "FP64",
+			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, defaultAggregationNumber, 32},
 		},
 	}
 
@@ -329,11 +381,11 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 	}
 
 	inferRequest := triton.ModelInferRequest{
-		ModelName:        "simple",
+		ModelName:        "model",
 		ModelVersion:     "1",
 		Inputs:           inferInputs,
 		Outputs:          inferOutputs,
-		RawInputContents: preprocess(fakeInput),
+		RawInputContents: [][]byte{{}},
 	}
 
 	inferResponse, err := e.inferenceClient.ModelInfer(context.Background(), &inferRequest)
@@ -345,6 +397,49 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 	outputs := postprocess(inferResponse.RawOutputContents)
 	logger.Infof("%#v", outputs)
 	return outputs, nil
+}
+
+func (e *evaluatorMachineLearning) aggregationHosts(host *resource.Host) ([]*resource.Host, [][]*resource.Host, error) {
+	firstOrderNeighbours, err := e.networkTopology.Neighbours(host, defaultAggregationNumber)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// If there is no neighbour host, use the root host as neighbour host.
+	// If there is no enough neighbour host, randomly select neighbour host.
+	if len(firstOrderNeighbours) == 0 {
+		for i := 0; i < defaultAggregationNumber; i++ {
+			firstOrderNeighbours = append(firstOrderNeighbours, host)
+		}
+	} else if len(firstOrderNeighbours) < defaultAggregationNumber {
+		number := defaultAggregationNumber - len(firstOrderNeighbours)
+		for i := 0; i < number; i++ {
+			firstOrderNeighbours = append(firstOrderNeighbours, firstOrderNeighbours[rand.Intn(number)])
+		}
+	}
+
+	secondOrderNeighbours := make([][]*resource.Host, 0, defaultAggregationNumber)
+	for _, firstOrderNeighbour := range firstOrderNeighbours {
+		neighbours, err := e.networkTopology.Neighbours(firstOrderNeighbour, defaultAggregationNumber)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if len(neighbours) == 0 {
+			for i := 0; i < defaultAggregationNumber; i++ {
+				neighbours = append(neighbours, firstOrderNeighbour)
+			}
+		} else if len(neighbours) < defaultAggregationNumber {
+			number := defaultAggregationNumber - len(neighbours)
+			for i := 0; i < number; i++ {
+				neighbours = append(neighbours, neighbours[rand.Intn(number)])
+			}
+		}
+
+		secondOrderNeighbours = append(secondOrderNeighbours, neighbours)
+	}
+
+	return firstOrderNeighbours, secondOrderNeighbours, nil
 }
 
 // Convert float64 input data into raw bytes (Little Endian).
