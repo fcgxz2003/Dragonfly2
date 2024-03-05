@@ -101,14 +101,14 @@ func TestEvaluatorMachineLearning_parseIP(t *testing.T) {
 	tests := []struct {
 		name   string
 		ip     string
-		expect func(t *testing.T, feature []int64)
+		expect func(t *testing.T, feature []float64)
 	}{
 		{
 			name: "parse ip to feature",
 			ip:   "172.0.0.1",
-			expect: func(t *testing.T, feature []int64) {
+			expect: func(t *testing.T, feature []float64) {
 				assert := assert.New(t)
-				assert.EqualValues(feature, []int64{
+				assert.EqualValues(feature, []float64{
 					0, 0, 1, 1, 0, 1, 0, 1,
 					0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0,
@@ -118,9 +118,9 @@ func TestEvaluatorMachineLearning_parseIP(t *testing.T) {
 		{
 			name: "parse ip to feature error",
 			ip:   "foo",
-			expect: func(t *testing.T, feature []int64) {
+			expect: func(t *testing.T, feature []float64) {
 				assert := assert.New(t)
-				assert.EqualValues(feature, []int64{
+				assert.EqualValues(feature, []float64{
 					0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0,

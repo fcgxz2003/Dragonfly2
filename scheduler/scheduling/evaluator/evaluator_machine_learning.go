@@ -267,41 +267,48 @@ func (e *evaluatorMachineLearning) IsBadNode(peer *resource.Peer) bool {
 }
 
 func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *resource.Peer) ([]float64, error) {
-	// // Find the aggregation host for child.
-	// childNeighbours, err := em.networkTopology.Neighbours(child.Host, defaultAggregationNumber)
-	// if err != nil {
-	// 	return []float64{}, err
-	// }
+	// Find the aggregation hosts for child.
+	childNeighbours, err := e.networkTopology.Neighbours(child.Host, defaultAggregationNumber)
+	if err != nil {
+		return []float64{}, err
+	}
 
-	// var childNeighboursNeighbours []*resource.Host
-	// for _, childNeighbour := range childNeighbours {
-	// 	ne_ne, err := em.networkTopology.Neighbours(childNeighbour, defaultAggregationNumber)
-	// 	if err != nil {
-	// 		return []float64{}, err
-	// 	}
+	childNeighboursNeighbours := make([][]*resource.Host, 0, defaultAggregationNumber)
+	for _, childNeighbour := range childNeighbours {
+		neighbourNeighbours, err := e.networkTopology.Neighbours(childNeighbour, defaultAggregationNumber)
+		if err != nil {
+			return []float64{}, err
+		}
 
-	// 	childNeighboursNeighbours = append(childNeighboursNeighbours, ne_ne...)
-	// }
+		childNeighboursNeighbours = append(childNeighboursNeighbours, neighbourNeighbours)
+	}
 
-	// // Find the aggregation host for parents.
-	// for _, parent := range parents {
-	// 	parentNeighbours, err := em.networkTopology.Neighbours(parent.Host, defaultAggregationNumber)
-	// 	if err != nil {
-	// 		return []float64{}, err
-	// 	}
+	// Generate feature vector for child and its aggregation hosts.
+	// childFeatures := parseIP(child.Host.IP)
 
-	// 	var parentNeighboursNeighbours []*resource.Host
-	// 	for _, parentNeighbour := range parentNeighbours {
-	// 		ne_ne, err := em.networkTopology.Neighbours(parentNeighbour, defaultAggregationNumber)
-	// 		if err != nil {
-	// 			return []float64{}, err
-	// 		}
+	// Find the aggregation hosts for parents.
+	parentsNeighbours := make([][]*resource.Host, 0, defaultAggregationNumber)
+	parentsNeighboursNeighbours := make([][][]*resource.Host, 0, defaultAggregationNumber)
+	for _, parent := range parents {
+		neighbours, err := e.networkTopology.Neighbours(parent.Host, defaultAggregationNumber)
+		if err != nil {
+			return []float64{}, err
+		}
+		parentsNeighbours = append(parentsNeighbours, neighbours)
 
-	// 		parentNeighboursNeighbours = append(parentNeighboursNeighbours, ne_ne...)
-	// 	}
-	// }
+		parentNeighbourNeighbours := make([][]*resource.Host, 0, defaultAggregationNumber)
+		for _, neighbour := range neighbours {
+			neighbourNeighbours, err := e.networkTopology.Neighbours(neighbour, defaultAggregationNumber)
+			if err != nil {
+				return []float64{}, err
+			}
 
-	// test
+			parentNeighbourNeighbours = append(parentNeighbourNeighbours, neighbourNeighbours)
+		}
+		parentsNeighboursNeighbours = append(parentsNeighboursNeighbours, parentNeighbourNeighbours)
+	}
+
+	// Generate feature vector for parents and theirs aggregation hosts.
 	fakeInput := make([][]float64, 0)
 	for i := 0; i < len(parents); i++ {
 		fakeInput = append(fakeInput, []float64{0.5, 0.5, 0.5, 0.5, 0.8})
@@ -381,14 +388,14 @@ func byteToFloat64(v []byte) float64 {
 }
 
 // parseIP parses an ip address to a feature vector.
-func parseIP(ip string) []int64 {
-	var features = make([]int64, 32)
+func parseIP(ip string) []float64 {
+	var features = make([]float64, 32)
 	prase := net.ParseIP(ip).To4()
 	if prase != nil {
 		for i := 0; i < net.IPv4len; i++ {
 			d := prase[i]
 			for j := 0; j < 8; j++ {
-				features[i*8+j] = int64(d & 0x1)
+				features[i*8+j] = float64(d & 0x1)
 				d = d >> 1
 			}
 
