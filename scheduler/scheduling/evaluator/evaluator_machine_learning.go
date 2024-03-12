@@ -343,34 +343,52 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 
 	inferInputs := []*triton.ModelInferRequest_InferInputTensor{
 		{
-			Name:     "dst",
-			Datatype: "FP64",
-			Shape:    []int64{int64(len(parents)), 32},
-		},
-		{
-			Name:     "dst_neg",
-			Datatype: "FP64",
-			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, 32},
-		},
-		{
-			Name:     "dst_neg_neg",
-			Datatype: "FP64",
-			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, defaultAggregationNumber, 32},
-		},
-		{
 			Name:     "src",
 			Datatype: "FP64",
 			Shape:    []int64{int64(len(parents)), 32},
+			Contents: &triton.InferTensorContents{
+				Fp64Contents: []float64{},
+			},
 		},
 		{
 			Name:     "src_neg",
 			Datatype: "FP64",
 			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, 32},
+			Contents: &triton.InferTensorContents{
+				Fp64Contents: []float64{},
+			},
 		},
 		{
 			Name:     "src_neg_neg",
 			Datatype: "FP64",
 			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, defaultAggregationNumber, 32},
+			Contents: &triton.InferTensorContents{
+				Fp64Contents: []float64{},
+			},
+		},
+		{
+			Name:     "dst",
+			Datatype: "FP64",
+			Shape:    []int64{int64(len(parents)), 32},
+			Contents: &triton.InferTensorContents{
+				Fp64Contents: []float64{},
+			},
+		},
+		{
+			Name:     "dst_neg",
+			Datatype: "FP64",
+			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, 32},
+			Contents: &triton.InferTensorContents{
+				Fp64Contents: []float64{},
+			},
+		},
+		{
+			Name:     "dst_neg_neg",
+			Datatype: "FP64",
+			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, defaultAggregationNumber, 32},
+			Contents: &triton.InferTensorContents{
+				Fp64Contents: []float64{},
+			},
 		},
 	}
 
@@ -381,11 +399,10 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 	}
 
 	inferRequest := triton.ModelInferRequest{
-		ModelName:        "model",
-		ModelVersion:     "1",
-		Inputs:           inferInputs,
-		Outputs:          inferOutputs,
-		RawInputContents: [][]byte{{}},
+		ModelName:    "model",
+		ModelVersion: "1",
+		Inputs:       inferInputs,
+		Outputs:      inferOutputs,
 	}
 
 	inferResponse, err := e.inferenceClient.ModelInfer(context.Background(), &inferRequest)
@@ -442,8 +459,8 @@ func (e *evaluatorMachineLearning) aggregationHosts(host *resource.Host) ([]*res
 	return firstOrderNeighbours, secondOrderNeighbours, nil
 }
 
-// Convert float64 input data into raw bytes (Little Endian).
-func preprocess(inputs [][]float64) [][]byte {
+// Convert [][]float64 input data into raw bytes (Little Endian).
+func preprocess2D(inputs [][]float64) [][]byte {
 	raw := make([][]byte, len(inputs))
 	for i := range raw {
 		raw[i] = make([]byte, len(inputs[0])*int(sizeFloat64))
@@ -451,6 +468,43 @@ func preprocess(inputs [][]float64) [][]byte {
 			offset := j * int(sizeFloat64)
 			s := float64ToByte(inputs[i][j])
 			copy(raw[i][offset:], s)
+		}
+	}
+	return raw
+}
+
+// Convert [][][]float64 input data into raw bytes (Little Endian).
+func preprocess3D(inputs [][][]float64) [][][]byte {
+	raw := make([][][]byte, len(inputs))
+	for i := range raw {
+		raw[i] = make([][]byte, len(inputs[i]))
+		for j := range inputs[i] {
+			raw[i][j] = make([]byte, len(inputs[i][j])*int(sizeFloat64))
+			for k := range inputs[i][j] {
+				offset := k * int(sizeFloat64)
+				s := float64ToByte(inputs[i][j][k])
+				copy(raw[i][j][offset:], s)
+			}
+		}
+	}
+	return raw
+}
+
+// Convert [][][][]float64 input data into raw bytes (Little Endian).
+func preprocess4D(inputs [][][][]float64) [][][][]byte {
+	raw := make([][][][]byte, len(inputs))
+	for i := range raw {
+		raw[i] = make([][][]byte, len(inputs[i]))
+		for j := range inputs[i] {
+			raw[i][j] = make([][]byte, len(inputs[i][j]))
+			for k := range inputs[i][j] {
+				raw[i][j][k] = make([]byte, len(inputs[i][j][k])*int(sizeFloat64))
+				for l := range inputs[i][j][k] {
+					offset := l * int(sizeFloat64)
+					s := float64ToByte(inputs[i][j][k][l])
+					copy(raw[i][j][k][offset:], s)
+				}
+			}
 		}
 	}
 	return raw
