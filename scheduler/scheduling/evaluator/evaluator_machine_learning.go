@@ -348,7 +348,7 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 		{
 			Name:     "src",
 			Datatype: "FP64",
-			Shape:    []int64{int64(len(parents)), 32},
+			Shape:    []int64{int64(len(parents)), defaultIPv4FeatureLength},
 			Contents: &triton.InferTensorContents{
 				Fp64Contents: srcFeature,
 			},
@@ -356,7 +356,7 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 		{
 			Name:     "src_neg",
 			Datatype: "FP64",
-			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, 32},
+			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, defaultIPv4FeatureLength},
 			Contents: &triton.InferTensorContents{
 				Fp64Contents: srcNegFeature,
 			},
@@ -364,7 +364,7 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 		{
 			Name:     "src_neg_neg",
 			Datatype: "FP64",
-			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, defaultAggregationNumber, 32},
+			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, defaultAggregationNumber, defaultIPv4FeatureLength},
 			Contents: &triton.InferTensorContents{
 				Fp64Contents: srcNegNegFeature,
 			},
@@ -372,7 +372,7 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 		{
 			Name:     "dst",
 			Datatype: "FP64",
-			Shape:    []int64{int64(len(parents)), 32},
+			Shape:    []int64{int64(len(parents)), defaultIPv4FeatureLength},
 			Contents: &triton.InferTensorContents{
 				Fp64Contents: destFeature,
 			},
@@ -380,7 +380,7 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 		{
 			Name:     "dst_neg",
 			Datatype: "FP64",
-			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, 32},
+			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, defaultIPv4FeatureLength},
 			Contents: &triton.InferTensorContents{
 				Fp64Contents: destNegFeature,
 			},
@@ -388,7 +388,7 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 		{
 			Name:     "dst_neg_neg",
 			Datatype: "FP64",
-			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, defaultAggregationNumber, 32},
+			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, defaultAggregationNumber, defaultIPv4FeatureLength},
 			Contents: &triton.InferTensorContents{
 				Fp64Contents: destNegNegFeature,
 			},
