@@ -47,56 +47,6 @@ func TestEvaluatorMachineLearning_newEvaluatorMachineLearning(t *testing.T) {
 	}
 }
 
-func TestEvaluatorMachineLearning_float64ToByte(t *testing.T) {
-	tests := []struct {
-		name   string
-		data   float64
-		expect func(t *testing.T, o []byte)
-	}{
-		{
-			name: "convert byte to float64",
-			data: 0.1,
-			expect: func(t *testing.T, o []byte) {
-				assert := assert.New(t)
-				assert.Equal(o, []byte{0x9a, 0x99, 0x99, 0x99, 0x99, 0x99, 0xb9, 0x3f})
-			},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			ctl := gomock.NewController(t)
-			defer ctl.Finish()
-			tc.expect(t, float64ToByte(tc.data))
-		})
-	}
-}
-
-func TestEvaluatorMachineLearning_byteToFloat64(t *testing.T) {
-	tests := []struct {
-		name   string
-		data   []byte
-		expect func(t *testing.T, o float64)
-	}{
-		{
-			name: "convert byte to float64",
-			data: float64ToByte(0.1),
-			expect: func(t *testing.T, o float64) {
-				assert := assert.New(t)
-				assert.Equal(o, 0.1)
-			},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			ctl := gomock.NewController(t)
-			defer ctl.Finish()
-			tc.expect(t, byteToFloat64(tc.data))
-		})
-	}
-}
-
 func TestEvaluatorMachineLearning_parseIP(t *testing.T) {
 	tests := []struct {
 		name   string

@@ -43,7 +43,10 @@ const (
 	defaultAggregationNumber = 3
 
 	// Number of bytes occupied by float64.
-	sizeFloat64 = unsafe.Sizeof(float64(0))
+	sizeFloat64 = int(unsafe.Sizeof(float32(0)))
+
+	// Deafault ipv4 Feature Length.
+	ipv4FeatureLength = 32
 )
 
 // evaluatorMachineLearning is an implementation of Evaluator.
@@ -459,75 +462,16 @@ func (e *evaluatorMachineLearning) aggregationHosts(host *resource.Host) ([]*res
 	return firstOrderNeighbours, secondOrderNeighbours, nil
 }
 
-// Convert [][]float64 input data into raw bytes (Little Endian).
-func preprocess2D(inputs [][]float64) [][]byte {
-	raw := make([][]byte, len(inputs))
-	for i := range raw {
-		raw[i] = make([]byte, len(inputs[0])*int(sizeFloat64))
-		for j := range inputs[i] {
-			offset := j * int(sizeFloat64)
-			s := float64ToByte(inputs[i][j])
-			copy(raw[i][offset:], s)
-		}
-	}
-	return raw
-}
-
-// Convert [][][]float64 input data into raw bytes (Little Endian).
-func preprocess3D(inputs [][][]float64) [][][]byte {
-	raw := make([][][]byte, len(inputs))
-	for i := range raw {
-		raw[i] = make([][]byte, len(inputs[i]))
-		for j := range inputs[i] {
-			raw[i][j] = make([]byte, len(inputs[i][j])*int(sizeFloat64))
-			for k := range inputs[i][j] {
-				offset := k * int(sizeFloat64)
-				s := float64ToByte(inputs[i][j][k])
-				copy(raw[i][j][offset:], s)
-			}
-		}
-	}
-	return raw
-}
-
-// Convert [][][][]float64 input data into raw bytes (Little Endian).
-func preprocess4D(inputs [][][][]float64) [][][][]byte {
-	raw := make([][][][]byte, len(inputs))
-	for i := range raw {
-		raw[i] = make([][][]byte, len(inputs[i]))
-		for j := range inputs[i] {
-			raw[i][j] = make([][]byte, len(inputs[i][j]))
-			for k := range inputs[i][j] {
-				raw[i][j][k] = make([]byte, len(inputs[i][j][k])*int(sizeFloat64))
-				for l := range inputs[i][j][k] {
-					offset := l * int(sizeFloat64)
-					s := float64ToByte(inputs[i][j][k][l])
-					copy(raw[i][j][k][offset:], s)
-				}
-			}
-		}
-	}
-	return raw
-}
-
 // Convert output's raw bytes into float64 data (Little Endian).
 func postprocess(raw [][]byte) []float64 {
-	outputs := make([]float64, len(raw[0])/int(sizeFloat64))
+	outputs := make([]float64, len(raw[0])/sizeFloat64)
 	for i := range outputs {
-		offset := i * int(sizeFloat64)
-		s := raw[0][offset : offset+int(unsafe.Sizeof(float64(0)))]
+		offset := i * sizeFloat64
+		s := raw[0][offset : offset+sizeFloat64]
 		outputs[i] = byteToFloat64(s)
 	}
 
 	return outputs
-}
-
-// Convert float64 to byte.
-func float64ToByte(v float64) []byte {
-	bits := math.Float64bits(v)
-	bts := make([]byte, unsafe.Sizeof(v))
-	binary.LittleEndian.PutUint64(bts, bits)
-	return bts
 }
 
 // Convert byte to float64.
