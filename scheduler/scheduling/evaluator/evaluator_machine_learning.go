@@ -39,14 +39,20 @@ import (
 )
 
 const (
+	// Number of bytes occupied by float64.
+	sizeFloat64 = int(unsafe.Sizeof(float64(0)))
+
 	// Default number of aggregated neighbours.
 	defaultAggregationNumber = 3
 
-	// Number of bytes occupied by float64.
-	sizeFloat64 = int(unsafe.Sizeof(float32(0)))
+	// IPv4 feature length.
+	defaultIPv4FeatureLength = 32
 
-	// Deafault ipv4 Feature Length.
-	ipv4FeatureLength = 32
+	// Default neighbour ip feature length.
+	defaultNeighbourIpFeatureLength = defaultAggregationNumber * defaultIPv4FeatureLength
+
+	// Default neighbour's neighbour ip feature length.
+	defaultNeighbourNeighbourIpFeatureLength = defaultAggregationNumber * defaultAggregationNumber * defaultIPv4FeatureLength
 )
 
 // evaluatorMachineLearning is an implementation of Evaluator.
@@ -279,32 +285,29 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 
 	// Generate feature vector for child and its aggregation hosts.
 	childIPFeature := parseIP(child.Host.IP)
-	childNegIPFeatures := make([][]float64, 0, defaultAggregationNumber)
+	childNegIPFeatures := make([]float64, 0, defaultNeighbourIpFeatureLength)
 	for _, childFirstOrderNeighbour := range childFirstOrderNeighbours {
-		childNegIPFeatures = append(childNegIPFeatures, parseIP(childFirstOrderNeighbour.IP))
+		childNegIPFeatures = append(childNegIPFeatures, parseIP(childFirstOrderNeighbour.IP)...)
 	}
 
-	childNegNegIPFeatures := make([][][]float64, 0, defaultAggregationNumber)
+	childNegNegIPFeatures := make([]float64, 0, defaultNeighbourNeighbourIpFeatureLength)
 	for _, childSecondOrderNeighbour := range childSecondOrderNeighbours {
-		ipFeature := make([][]float64, 0, defaultAggregationNumber)
 		for _, host := range childSecondOrderNeighbour {
-			ipFeature = append(ipFeature, parseIP(host.IP))
+			childNegNegIPFeatures = append(childNegNegIPFeatures, parseIP(host.IP)...)
 		}
-
-		childNegNegIPFeatures = append(childNegNegIPFeatures, ipFeature)
 	}
 
 	var (
-		srcFeature       = make([][]float64, 0, len(parents))
-		srcNegFeature    = make([][][]float64, 0, len(parents))
-		srcNegNegFeature = make([][][][]float64, 0, len(parents))
+		srcFeature       = make([]float64, 0, len(parents)*defaultIPv4FeatureLength)
+		srcNegFeature    = make([]float64, 0, len(parents)*defaultNeighbourIpFeatureLength)
+		srcNegNegFeature = make([]float64, 0, len(parents)*defaultNeighbourNeighbourIpFeatureLength)
 	)
 
 	// Map the features of each child to each parent.
-	for i, _ := range parents {
-		srcFeature[i] = childIPFeature
-		srcNegFeature[i] = childNegIPFeatures
-		srcNegNegFeature[i] = childNegNegIPFeatures
+	for i := 0; i < len(parents); i++ {
+		srcFeature = append(srcFeature, childIPFeature...)
+		srcNegFeature = append(srcNegFeature, childNegIPFeatures...)
+		srcNegNegFeature = append(srcNegNegFeature, childNegNegIPFeatures...)
 	}
 
 	// Find the aggregation hosts for parents.
@@ -322,25 +325,22 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 
 	// Generate feature vector for parents and theirs aggregation hosts.
 	var (
-		destFeature       = make([][]float64, 0, len(parents))
-		destNegFeature    = make([][][]float64, 0, len(parents))
-		destNegNegFeature = make([][][][]float64, 0, len(parents))
+		destFeature       = make([]float64, 0, len(parents)*defaultIPv4FeatureLength)
+		destNegFeature    = make([]float64, 0, len(parents)*defaultNeighbourIpFeatureLength)
+		destNegNegFeature = make([]float64, 0, len(parents)*defaultNeighbourNeighbourIpFeatureLength)
 	)
 
 	for i, parent := range parents {
-		destFeature[i] = parseIP(parent.Host.IP)
+		destFeature = append(destFeature, parseIP(parent.Host.IP)...)
 
 		for _, parentFirstOrderNeighbours := range parentsFirstOrderNeighbours[i] {
-			destNegFeature[i] = append(destNegFeature[i], parseIP(parentFirstOrderNeighbours.IP))
+			destNegFeature = append(destNegFeature, parseIP(parentFirstOrderNeighbours.IP)...)
 		}
 
 		for _, parentSecondOrderNeighbours := range parentsSecondOrderNeighbours[i] {
-			ipFeature := make([][]float64, 0, defaultAggregationNumber)
 			for _, host := range parentSecondOrderNeighbours {
-				ipFeature = append(ipFeature, parseIP(host.IP))
+				destNegNegFeature = append(destNegNegFeature, parseIP(host.IP)...)
 			}
-
-			destNegNegFeature[i] = append(destNegNegFeature[i], ipFeature)
 		}
 	}
 
@@ -350,7 +350,7 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 			Datatype: "FP64",
 			Shape:    []int64{int64(len(parents)), 32},
 			Contents: &triton.InferTensorContents{
-				Fp64Contents: []float64{},
+				Fp64Contents: srcFeature,
 			},
 		},
 		{
@@ -358,7 +358,7 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 			Datatype: "FP64",
 			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, 32},
 			Contents: &triton.InferTensorContents{
-				Fp64Contents: []float64{},
+				Fp64Contents: srcNegFeature,
 			},
 		},
 		{
@@ -366,7 +366,7 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 			Datatype: "FP64",
 			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, defaultAggregationNumber, 32},
 			Contents: &triton.InferTensorContents{
-				Fp64Contents: []float64{},
+				Fp64Contents: srcNegNegFeature,
 			},
 		},
 		{
@@ -374,7 +374,7 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 			Datatype: "FP64",
 			Shape:    []int64{int64(len(parents)), 32},
 			Contents: &triton.InferTensorContents{
-				Fp64Contents: []float64{},
+				Fp64Contents: destFeature,
 			},
 		},
 		{
@@ -382,7 +382,7 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 			Datatype: "FP64",
 			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, 32},
 			Contents: &triton.InferTensorContents{
-				Fp64Contents: []float64{},
+				Fp64Contents: destNegFeature,
 			},
 		},
 		{
@@ -390,7 +390,7 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 			Datatype: "FP64",
 			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, defaultAggregationNumber, 32},
 			Contents: &triton.InferTensorContents{
-				Fp64Contents: []float64{},
+				Fp64Contents: destNegNegFeature,
 			},
 		},
 	}
