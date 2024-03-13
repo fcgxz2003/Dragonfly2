@@ -145,6 +145,31 @@ func TestEvaluatorMachineLearning_aggregationHosts(t *testing.T) {
 				assert.EqualValues(secondOrderNeighbours[1][1], mockSecondOrderHosts[2])
 			},
 		},
+		{
+			name: "get empty aggregation hosts",
+			mock: func(nt *networktopologymocks.MockNetworkTopologyMockRecorder) {
+				gomock.InOrder(
+					nt.Neighbours(gomock.Eq(&mockRawHost), 2).Return([]*resource.Host{}, nil).Times(1),
+					nt.Neighbours(gomock.Eq(&mockRawHost), 2).Return([]*resource.Host{}, nil).Times(1),
+					nt.Neighbours(gomock.Eq(&mockRawHost), 2).Return([]*resource.Host{}, nil).Times(1),
+				)
+			},
+			expect: func(t *testing.T, e Evaluator) {
+				assert := assert.New(t)
+				firstOrderNeighbours, secondOrderNeighbours, err := e.(*evaluatorMachineLearning).aggregationHosts(&mockRawHost, 2)
+				assert.Nil(err)
+				assert.EqualValues(len(firstOrderNeighbours), 2)
+				assert.EqualValues(len(secondOrderNeighbours), 2)
+				assert.EqualValues(len(secondOrderNeighbours[0]), 2)
+				assert.EqualValues(len(secondOrderNeighbours[1]), 2)
+				assert.EqualValues(firstOrderNeighbours[0], &mockRawHost)
+				assert.EqualValues(firstOrderNeighbours[1], &mockRawHost)
+				assert.EqualValues(secondOrderNeighbours[0][0], &mockRawHost)
+				assert.EqualValues(secondOrderNeighbours[0][1], &mockRawHost)
+				assert.EqualValues(secondOrderNeighbours[1][0], &mockRawHost)
+				assert.EqualValues(secondOrderNeighbours[1][1], &mockRawHost)
+			},
+		},
 	}
 
 	for _, tc := range tests {
