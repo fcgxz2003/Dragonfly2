@@ -486,10 +486,15 @@ func (e *evaluatorMachineLearning) aggregationHosts(host *resource.Host, number 
 			firstOrderNeighbours = append(firstOrderNeighbours, host)
 		}
 	} else if len(firstOrderNeighbours) < number {
-		number := number - len(firstOrderNeighbours)
-		for i := 0; i < number; i++ {
-			firstOrderNeighbours = append(firstOrderNeighbours, firstOrderNeighbours[rand.Intn(number)])
+		n := number - len(firstOrderNeighbours)
+		for i := 0; i < n; i++ {
+			firstOrderNeighbours = append(firstOrderNeighbours, firstOrderNeighbours[rand.Intn(n)])
 		}
+	}
+
+	logger.Info(len(firstOrderNeighbours))
+	for i := 0; i < len(firstOrderNeighbours); i++ {
+		logger.Info(firstOrderNeighbours[i])
 	}
 
 	secondOrderNeighbours := make([][]*resource.Host, 0, number)
@@ -504,13 +509,20 @@ func (e *evaluatorMachineLearning) aggregationHosts(host *resource.Host, number 
 				neighbours = append(neighbours, firstOrderNeighbour)
 			}
 		} else if len(neighbours) < number {
-			number := number - len(neighbours)
-			for i := 0; i < number; i++ {
-				neighbours = append(neighbours, neighbours[rand.Intn(number)])
+			n := number - len(neighbours)
+			for i := 0; i < n; i++ {
+				neighbours = append(neighbours, neighbours[rand.Intn(n)])
 			}
 		}
 
 		secondOrderNeighbours = append(secondOrderNeighbours, neighbours)
+	}
+
+	logger.Info(len(secondOrderNeighbours))
+	for i := 0; i < len(secondOrderNeighbours); i++ {
+		for j := 0; j < len(secondOrderNeighbours[i]); j++ {
+			logger.Info(secondOrderNeighbours[i][j])
+		}
 	}
 
 	return firstOrderNeighbours, secondOrderNeighbours, nil
