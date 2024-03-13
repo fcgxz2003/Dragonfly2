@@ -287,11 +287,11 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 	}
 
 	// Generate feature vector for child and its aggregation hosts.
-
 	childIPFeature, err := parseIP(child.Host.IP)
 	if err != nil {
 		return []float64{}, err
 	}
+	logger.Info(childIPFeature)
 
 	childNegIPFeatures := make([]float32, 0, defaultNeighbourIpFeatureLength)
 	for _, childFirstOrderNeighbour := range childFirstOrderNeighbours {
@@ -302,6 +302,7 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 
 		childNegIPFeatures = append(childNegIPFeatures, childNegIPFeature...)
 	}
+	logger.Info(childNegIPFeatures)
 
 	childNegNegIPFeatures := make([]float32, 0, defaultNeighbourNeighbourIpFeatureLength)
 	for _, childSecondOrderNeighbour := range childSecondOrderNeighbours {
@@ -314,9 +315,6 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 			childNegNegIPFeatures = append(childNegNegIPFeatures, childNegNegIPFeature...)
 		}
 	}
-
-	logger.Info(childIPFeature)
-	logger.Info(childNegIPFeatures)
 	logger.Info(childNegNegIPFeatures)
 
 	var (
@@ -350,6 +348,9 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 		parentsSecondOrderNeighbours = append(parentsSecondOrderNeighbours, parentSecondOrderNeighbours)
 	}
 
+	logger.Info(parentsFirstOrderNeighbours)
+	logger.Info(parentsSecondOrderNeighbours)
+
 	// Generate feature vector for parents and theirs aggregation hosts.
 	var (
 		destFeature       = make([]float32, 0, len(parents)*defaultIPv4FeatureLength)
@@ -364,6 +365,7 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 		}
 
 		destFeature = append(destFeature, feature...)
+		logger.Info(destFeature)
 
 		for _, parentFirstOrderNeighbours := range parentsFirstOrderNeighbours[i] {
 			feature, err := parseIP(parentFirstOrderNeighbours.IP)
@@ -373,6 +375,7 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 
 			destNegFeature = append(destNegFeature, feature...)
 		}
+		logger.Info(destNegFeature)
 
 		for _, parentSecondOrderNeighbours := range parentsSecondOrderNeighbours[i] {
 			for _, host := range parentSecondOrderNeighbours {
@@ -384,11 +387,8 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 				destNegNegFeature = append(destNegNegFeature, feature...)
 			}
 		}
+		logger.Info(destNegNegFeature)
 	}
-
-	logger.Info(destFeature)
-	logger.Info(destNegFeature)
-	logger.Info(destNegNegFeature)
 
 	inferInputs := []*triton.ModelInferRequest_InferInputTensor{
 		{
