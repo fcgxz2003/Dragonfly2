@@ -51,13 +51,14 @@ func TestEvaluatorMachineLearning_parseIP(t *testing.T) {
 	tests := []struct {
 		name   string
 		ip     string
-		expect func(t *testing.T, feature []float32)
+		expect func(t *testing.T, feature []float32, err error)
 	}{
 		{
 			name: "parse ip to feature",
 			ip:   "172.0.0.1",
-			expect: func(t *testing.T, feature []float32) {
+			expect: func(t *testing.T, feature []float32, err error) {
 				assert := assert.New(t)
+				assert.Nil(err)
 				assert.EqualValues(feature, []float32{
 					0, 0, 1, 1, 0, 1, 0, 1,
 					0, 0, 0, 0, 0, 0, 0, 0,
@@ -68,13 +69,10 @@ func TestEvaluatorMachineLearning_parseIP(t *testing.T) {
 		{
 			name: "parse ip to feature error",
 			ip:   "foo",
-			expect: func(t *testing.T, feature []float32) {
+			expect: func(t *testing.T, feature []float32, err error) {
 				assert := assert.New(t)
-				assert.EqualValues(feature, []float32{
-					0, 0, 0, 0, 0, 0, 0, 0,
-					0, 0, 0, 0, 0, 0, 0, 0,
-					0, 0, 0, 0, 0, 0, 0, 0,
-					0, 0, 0, 0, 0, 0, 0, 0})
+				assert.Nil(feature)
+				assert.EqualError(err, "prase ip error")
 			},
 		},
 	}
@@ -83,7 +81,8 @@ func TestEvaluatorMachineLearning_parseIP(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctl := gomock.NewController(t)
 			defer ctl.Finish()
-			tc.expect(t, parseIP(tc.ip))
+			feature, err := parseIP(tc.ip)
+			tc.expect(t, feature, err)
 		})
 	}
 }

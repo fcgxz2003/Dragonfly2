@@ -19,6 +19,7 @@ package evaluator
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"math"
 	"math/big"
 	"math/rand"
@@ -286,16 +287,31 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 	}
 
 	// Generate feature vector for child and its aggregation hosts.
-	childIPFeature := parseIP(child.Host.IP)
+
+	childIPFeature, err := parseIP(child.Host.IP)
+	if err != nil {
+		return []float64{}, err
+	}
+
 	childNegIPFeatures := make([]float32, 0, defaultNeighbourIpFeatureLength)
 	for _, childFirstOrderNeighbour := range childFirstOrderNeighbours {
-		childNegIPFeatures = append(childNegIPFeatures, parseIP(childFirstOrderNeighbour.IP)...)
+		childNegIPFeature, err := parseIP(childFirstOrderNeighbour.IP)
+		if err != nil {
+			return []float64{}, err
+		}
+
+		childNegIPFeatures = append(childNegIPFeatures, childNegIPFeature...)
 	}
 
 	childNegNegIPFeatures := make([]float32, 0, defaultNeighbourNeighbourIpFeatureLength)
 	for _, childSecondOrderNeighbour := range childSecondOrderNeighbours {
 		for _, host := range childSecondOrderNeighbour {
-			childNegNegIPFeatures = append(childNegNegIPFeatures, parseIP(host.IP)...)
+			childNegNegIPFeature, err := parseIP(host.IP)
+			if err != nil {
+				return []float64{}, err
+			}
+
+			childNegNegIPFeatures = append(childNegNegIPFeatures, childNegNegIPFeature...)
 		}
 	}
 
@@ -342,15 +358,30 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 	)
 
 	for i, parent := range parents {
-		destFeature = append(destFeature, parseIP(parent.Host.IP)...)
+		feature, err := parseIP(parent.Host.IP)
+		if err != nil {
+			return []float64{}, err
+		}
+
+		destFeature = append(destFeature, feature...)
 
 		for _, parentFirstOrderNeighbours := range parentsFirstOrderNeighbours[i] {
-			destNegFeature = append(destNegFeature, parseIP(parentFirstOrderNeighbours.IP)...)
+			feature, err := parseIP(parentFirstOrderNeighbours.IP)
+			if err != nil {
+				return []float64{}, err
+			}
+
+			destNegFeature = append(destNegFeature, feature...)
 		}
 
 		for _, parentSecondOrderNeighbours := range parentsSecondOrderNeighbours[i] {
 			for _, host := range parentSecondOrderNeighbours {
-				destNegNegFeature = append(destNegNegFeature, parseIP(host.IP)...)
+				feature, err := parseIP(host.IP)
+				if err != nil {
+					return []float64{}, err
+				}
+
+				destNegNegFeature = append(destNegNegFeature, feature...)
 			}
 		}
 	}
@@ -502,19 +533,22 @@ func byteToFloat32(v []byte) float32 {
 }
 
 // parseIP parses an ip address to a feature vector.
-func parseIP(ip string) []float32 {
+func parseIP(ip string) ([]float32, error) {
 	var features = make([]float32, 32)
 	prase := net.ParseIP(ip).To4()
-	if prase != nil {
-		for i := 0; i < net.IPv4len; i++ {
-			d := prase[i]
-			for j := 0; j < 8; j++ {
-				features[i*8+j] = float32(d & 0x1)
-				d = d >> 1
-			}
-
-		}
+	if prase == nil {
+		logger.Info(ip)
+		return nil, errors.New("prase ip error")
 	}
 
-	return features
+	for i := 0; i < net.IPv4len; i++ {
+		d := prase[i]
+		for j := 0; j < 8; j++ {
+			features[i*8+j] = float32(d & 0x1)
+			d = d >> 1
+		}
+
+	}
+
+	return features, nil
 }
