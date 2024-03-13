@@ -299,6 +299,10 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 		}
 	}
 
+	logger.Info(childIPFeature)
+	logger.Info(childNegIPFeatures)
+	logger.Info(childNegNegIPFeatures)
+
 	var (
 		srcFeature       = make([]float32, 0, len(parents)*defaultIPv4FeatureLength)
 		srcNegFeature    = make([]float32, 0, len(parents)*defaultNeighbourIpFeatureLength)
@@ -322,6 +326,7 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 	for _, parent := range parents {
 		parentFirstOrderNeighbours, parentSecondOrderNeighbours, err := e.aggregationHosts(parent.Host)
 		if err != nil {
+			logger.Error(err)
 			return []float64{}, err
 		}
 
