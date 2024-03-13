@@ -22,6 +22,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	gomock "go.uber.org/mock/gomock"
+
+	"d7y.io/dragonfly/v2/pkg/idgen"
+	inferenceclientmock "d7y.io/dragonfly/v2/pkg/rpc/inference/client/mocks"
+	"d7y.io/dragonfly/v2/pkg/types"
+	networktopologymocks "d7y.io/dragonfly/v2/scheduler/networktopology/mocks"
+	"d7y.io/dragonfly/v2/scheduler/resource"
 )
 
 func TestEvaluatorMachineLearning_newEvaluatorMachineLearning(t *testing.T) {
@@ -43,6 +49,113 @@ func TestEvaluatorMachineLearning_newEvaluatorMachineLearning(t *testing.T) {
 			ctl := gomock.NewController(t)
 			defer ctl.Finish()
 			tc.expect(t, newEvaluatorMachineLearning())
+		})
+	}
+}
+
+func TestEvaluatorMachineLearning_aggregationHosts(t *testing.T) {
+	mockFirstOrderHosts := []*resource.Host{
+		resource.NewHost(idgen.HostIDV2("127.0.0.1", "foo"), "127.0.0.1", "foo", 8003, 8001, types.HostTypeNormal),
+		resource.NewHost(idgen.HostIDV2("127.0.0.1", "bar"), "127.0.0.1", "bar", 8003, 8001, types.HostTypeNormal),
+	}
+
+	mockSecondOrderHosts := []*resource.Host{
+		resource.NewHost(idgen.HostIDV2("127.0.0.1", "baz"), "127.0.0.1", "baz", 8003, 8001, types.HostTypeNormal),
+		resource.NewHost(idgen.HostIDV2("127.0.0.1", "bac"), "127.0.0.1", "bac", 8003, 8001, types.HostTypeNormal),
+		resource.NewHost(idgen.HostIDV2("127.0.0.1", "bad"), "127.0.0.1", "bad", 8003, 8001, types.HostTypeNormal),
+		resource.NewHost(idgen.HostIDV2("127.0.0.1", "bae"), "127.0.0.1", "bae", 8003, 8001, types.HostTypeNormal),
+	}
+
+	tests := []struct {
+		name   string
+		mock   func(nt *networktopologymocks.MockNetworkTopologyMockRecorder)
+		expect func(t *testing.T, e Evaluator)
+	}{
+		{
+			name: "get aggregation hosts success",
+			mock: func(nt *networktopologymocks.MockNetworkTopologyMockRecorder) {
+				gomock.InOrder(
+					nt.Neighbours(gomock.Eq(&mockRawHost), 2).Return(mockFirstOrderHosts, nil).Times(1),
+					nt.Neighbours(gomock.Eq(mockFirstOrderHosts[0]), 2).Return([]*resource.Host{mockSecondOrderHosts[0], mockSecondOrderHosts[1]}, nil).Times(1),
+					nt.Neighbours(gomock.Eq(mockFirstOrderHosts[1]), 2).Return([]*resource.Host{mockSecondOrderHosts[2], mockSecondOrderHosts[3]}, nil).Times(1),
+				)
+			},
+			expect: func(t *testing.T, e Evaluator) {
+				assert := assert.New(t)
+				firstOrderNeighbours, secondOrderNeighbours, err := e.(*evaluatorMachineLearning).aggregationHosts(&mockRawHost, 2)
+				assert.Nil(err)
+				assert.EqualValues(len(firstOrderNeighbours), 2)
+				assert.EqualValues(len(secondOrderNeighbours), 2)
+				assert.EqualValues(len(secondOrderNeighbours[0]), 2)
+				assert.EqualValues(len(secondOrderNeighbours[1]), 2)
+				assert.EqualValues(firstOrderNeighbours[0], mockFirstOrderHosts[0])
+				assert.EqualValues(firstOrderNeighbours[1], mockFirstOrderHosts[1])
+				assert.EqualValues(secondOrderNeighbours[0][0], mockSecondOrderHosts[0])
+				assert.EqualValues(secondOrderNeighbours[0][1], mockSecondOrderHosts[1])
+				assert.EqualValues(secondOrderNeighbours[1][0], mockSecondOrderHosts[2])
+				assert.EqualValues(secondOrderNeighbours[1][1], mockSecondOrderHosts[3])
+			},
+		},
+		{
+			name: "get no enough first aggregation hosts",
+			mock: func(nt *networktopologymocks.MockNetworkTopologyMockRecorder) {
+				gomock.InOrder(
+					nt.Neighbours(gomock.Eq(&mockRawHost), 2).Return([]*resource.Host{mockFirstOrderHosts[0]}, nil).Times(1),
+					nt.Neighbours(gomock.Eq(mockFirstOrderHosts[0]), 2).Return([]*resource.Host{mockSecondOrderHosts[0], mockSecondOrderHosts[1]}, nil).Times(2),
+				)
+			},
+			expect: func(t *testing.T, e Evaluator) {
+				assert := assert.New(t)
+				firstOrderNeighbours, secondOrderNeighbours, err := e.(*evaluatorMachineLearning).aggregationHosts(&mockRawHost, 2)
+				assert.Nil(err)
+				assert.EqualValues(len(firstOrderNeighbours), 2)
+				assert.EqualValues(len(secondOrderNeighbours), 2)
+				assert.EqualValues(len(secondOrderNeighbours[0]), 2)
+				assert.EqualValues(len(secondOrderNeighbours[1]), 2)
+				assert.EqualValues(firstOrderNeighbours[0], mockFirstOrderHosts[0])
+				assert.EqualValues(firstOrderNeighbours[1], mockFirstOrderHosts[0])
+				assert.EqualValues(secondOrderNeighbours[0][0], mockSecondOrderHosts[0])
+				assert.EqualValues(secondOrderNeighbours[0][1], mockSecondOrderHosts[1])
+				assert.EqualValues(secondOrderNeighbours[1][0], mockSecondOrderHosts[0])
+				assert.EqualValues(secondOrderNeighbours[1][1], mockSecondOrderHosts[1])
+			},
+		},
+		{
+			name: "get no enough second aggregation hosts",
+			mock: func(nt *networktopologymocks.MockNetworkTopologyMockRecorder) {
+				gomock.InOrder(
+					nt.Neighbours(gomock.Eq(&mockRawHost), 2).Return(mockFirstOrderHosts, nil).Times(1),
+					nt.Neighbours(gomock.Eq(mockFirstOrderHosts[0]), 2).Return([]*resource.Host{mockSecondOrderHosts[0]}, nil).Times(1),
+					nt.Neighbours(gomock.Eq(mockFirstOrderHosts[1]), 2).Return([]*resource.Host{mockSecondOrderHosts[2]}, nil).Times(1),
+				)
+			},
+			expect: func(t *testing.T, e Evaluator) {
+				assert := assert.New(t)
+				firstOrderNeighbours, secondOrderNeighbours, err := e.(*evaluatorMachineLearning).aggregationHosts(&mockRawHost, 2)
+				assert.Nil(err)
+				assert.EqualValues(len(firstOrderNeighbours), 2)
+				assert.EqualValues(len(secondOrderNeighbours), 2)
+				assert.EqualValues(len(secondOrderNeighbours[0]), 2)
+				assert.EqualValues(len(secondOrderNeighbours[1]), 2)
+				assert.EqualValues(firstOrderNeighbours[0], mockFirstOrderHosts[0])
+				assert.EqualValues(firstOrderNeighbours[1], mockFirstOrderHosts[1])
+				assert.EqualValues(secondOrderNeighbours[0][0], mockSecondOrderHosts[0])
+				assert.EqualValues(secondOrderNeighbours[0][1], mockSecondOrderHosts[0])
+				assert.EqualValues(secondOrderNeighbours[1][0], mockSecondOrderHosts[2])
+				assert.EqualValues(secondOrderNeighbours[1][1], mockSecondOrderHosts[2])
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctl := gomock.NewController(t)
+			defer ctl.Finish()
+			mockNetworkTopology := networktopologymocks.NewMockNetworkTopology(ctl)
+			mockInferenceClient := inferenceclientmock.NewMockV1(ctl)
+			tc.mock(mockNetworkTopology.EXPECT())
+			e := newEvaluatorMachineLearning(WithNetworkTopologyInMachineLearning(mockNetworkTopology), WithInferenceClient(mockInferenceClient))
+			tc.expect(t, e)
 		})
 	}
 }

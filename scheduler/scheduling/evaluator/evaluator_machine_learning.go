@@ -280,11 +280,13 @@ func (e *evaluatorMachineLearning) IsBadNode(peer *resource.Peer) bool {
 func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *resource.Peer) ([]float64, error) {
 	logger.Infof("parents number: %d", len(parents))
 	// Find the aggregation hosts for child.
-	childFirstOrderNeighbours, childSecondOrderNeighbours, err := e.aggregationHosts(child.Host)
+	childFirstOrderNeighbours, childSecondOrderNeighbours, err := e.aggregationHosts(child.Host, defaultAggregationNumber)
 	if err != nil {
 		logger.Error(err)
 		return []float64{}, err
 	}
+	logger.Info(childFirstOrderNeighbours)
+	logger.Info(childSecondOrderNeighbours)
 
 	// Generate feature vector for child and its aggregation hosts.
 	childIPFeature, err := parseIP(child.Host.IP)
@@ -338,7 +340,7 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 	parentsFirstOrderNeighbours := make([][]*resource.Host, 0, defaultAggregationNumber)
 	parentsSecondOrderNeighbours := make([][][]*resource.Host, 0, defaultAggregationNumber)
 	for _, parent := range parents {
-		parentFirstOrderNeighbours, parentSecondOrderNeighbours, err := e.aggregationHosts(parent.Host)
+		parentFirstOrderNeighbours, parentSecondOrderNeighbours, err := e.aggregationHosts(parent.Host, defaultAggregationNumber)
 		if err != nil {
 			logger.Error(err)
 			return []float64{}, err
@@ -471,8 +473,8 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 	return outputs, nil
 }
 
-func (e *evaluatorMachineLearning) aggregationHosts(host *resource.Host) ([]*resource.Host, [][]*resource.Host, error) {
-	firstOrderNeighbours, err := e.networkTopology.Neighbours(host, defaultAggregationNumber)
+func (e *evaluatorMachineLearning) aggregationHosts(host *resource.Host, number int) ([]*resource.Host, [][]*resource.Host, error) {
+	firstOrderNeighbours, err := e.networkTopology.Neighbours(host, number)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -480,29 +482,29 @@ func (e *evaluatorMachineLearning) aggregationHosts(host *resource.Host) ([]*res
 	// If there is no neighbour host, using the root host as neighbour host.
 	// If there is no enough neighbour host, randomly select neighbour host.
 	if len(firstOrderNeighbours) == 0 {
-		for i := 0; i < defaultAggregationNumber; i++ {
+		for i := 0; i < number; i++ {
 			firstOrderNeighbours = append(firstOrderNeighbours, host)
 		}
-	} else if len(firstOrderNeighbours) < defaultAggregationNumber {
-		number := defaultAggregationNumber - len(firstOrderNeighbours)
+	} else if len(firstOrderNeighbours) < number {
+		number := number - len(firstOrderNeighbours)
 		for i := 0; i < number; i++ {
 			firstOrderNeighbours = append(firstOrderNeighbours, firstOrderNeighbours[rand.Intn(number)])
 		}
 	}
 
-	secondOrderNeighbours := make([][]*resource.Host, 0, defaultAggregationNumber)
+	secondOrderNeighbours := make([][]*resource.Host, 0, number)
 	for _, firstOrderNeighbour := range firstOrderNeighbours {
-		neighbours, err := e.networkTopology.Neighbours(firstOrderNeighbour, defaultAggregationNumber)
+		neighbours, err := e.networkTopology.Neighbours(firstOrderNeighbour, number)
 		if err != nil {
 			return nil, nil, err
 		}
 
 		if len(neighbours) == 0 {
-			for i := 0; i < defaultAggregationNumber; i++ {
+			for i := 0; i < number; i++ {
 				neighbours = append(neighbours, firstOrderNeighbour)
 			}
-		} else if len(neighbours) < defaultAggregationNumber {
-			number := defaultAggregationNumber - len(neighbours)
+		} else if len(neighbours) < number {
+			number := number - len(neighbours)
 			for i := 0; i < number; i++ {
 				neighbours = append(neighbours, neighbours[rand.Intn(number)])
 			}
