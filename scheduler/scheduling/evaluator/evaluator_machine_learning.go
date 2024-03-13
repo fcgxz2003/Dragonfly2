@@ -281,6 +281,7 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 	// Find the aggregation hosts for child.
 	childFirstOrderNeighbours, childSecondOrderNeighbours, err := e.aggregationHosts(child.Host)
 	if err != nil {
+		logger.Error(err)
 		return []float64{}, err
 	}
 
@@ -310,6 +311,10 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 		srcNegFeature = append(srcNegFeature, childNegIPFeatures...)
 		srcNegNegFeature = append(srcNegNegFeature, childNegNegIPFeatures...)
 	}
+
+	logger.Info(srcFeature)
+	logger.Info(srcNegFeature)
+	logger.Info(srcNegNegFeature)
 
 	// Find the aggregation hosts for parents.
 	parentsFirstOrderNeighbours := make([][]*resource.Host, 0, defaultAggregationNumber)
@@ -344,6 +349,10 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 			}
 		}
 	}
+
+	logger.Info(destFeature)
+	logger.Info(destNegFeature)
+	logger.Info(destNegNegFeature)
 
 	inferInputs := []*triton.ModelInferRequest_InferInputTensor{
 		{
@@ -432,7 +441,7 @@ func (e *evaluatorMachineLearning) aggregationHosts(host *resource.Host) ([]*res
 		return nil, nil, err
 	}
 
-	// If there is no neighbour host, use the root host as neighbour host.
+	// If there is no neighbour host, using the root host as neighbour host.
 	// If there is no enough neighbour host, randomly select neighbour host.
 	if len(firstOrderNeighbours) == 0 {
 		for i := 0; i < defaultAggregationNumber; i++ {
