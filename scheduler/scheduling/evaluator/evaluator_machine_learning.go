@@ -39,8 +39,8 @@ import (
 )
 
 const (
-	// Number of bytes occupied by float64.
-	sizeFloat64 = int(unsafe.Sizeof(float64(0)))
+	// Number of bytes occupied by float32.
+	sizeFloat32 = int(unsafe.Sizeof(float32(0)))
 
 	// Default number of aggregated neighbours.
 	defaultAggregationNumber = 3
@@ -285,12 +285,12 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 
 	// Generate feature vector for child and its aggregation hosts.
 	childIPFeature := parseIP(child.Host.IP)
-	childNegIPFeatures := make([]float64, 0, defaultNeighbourIpFeatureLength)
+	childNegIPFeatures := make([]float32, 0, defaultNeighbourIpFeatureLength)
 	for _, childFirstOrderNeighbour := range childFirstOrderNeighbours {
 		childNegIPFeatures = append(childNegIPFeatures, parseIP(childFirstOrderNeighbour.IP)...)
 	}
 
-	childNegNegIPFeatures := make([]float64, 0, defaultNeighbourNeighbourIpFeatureLength)
+	childNegNegIPFeatures := make([]float32, 0, defaultNeighbourNeighbourIpFeatureLength)
 	for _, childSecondOrderNeighbour := range childSecondOrderNeighbours {
 		for _, host := range childSecondOrderNeighbour {
 			childNegNegIPFeatures = append(childNegNegIPFeatures, parseIP(host.IP)...)
@@ -298,9 +298,9 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 	}
 
 	var (
-		srcFeature       = make([]float64, 0, len(parents)*defaultIPv4FeatureLength)
-		srcNegFeature    = make([]float64, 0, len(parents)*defaultNeighbourIpFeatureLength)
-		srcNegNegFeature = make([]float64, 0, len(parents)*defaultNeighbourNeighbourIpFeatureLength)
+		srcFeature       = make([]float32, 0, len(parents)*defaultIPv4FeatureLength)
+		srcNegFeature    = make([]float32, 0, len(parents)*defaultNeighbourIpFeatureLength)
+		srcNegNegFeature = make([]float32, 0, len(parents)*defaultNeighbourNeighbourIpFeatureLength)
 	)
 
 	// Map the features of each child to each parent.
@@ -325,9 +325,9 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 
 	// Generate feature vector for parents and theirs aggregation hosts.
 	var (
-		destFeature       = make([]float64, 0, len(parents)*defaultIPv4FeatureLength)
-		destNegFeature    = make([]float64, 0, len(parents)*defaultNeighbourIpFeatureLength)
-		destNegNegFeature = make([]float64, 0, len(parents)*defaultNeighbourNeighbourIpFeatureLength)
+		destFeature       = make([]float32, 0, len(parents)*defaultIPv4FeatureLength)
+		destNegFeature    = make([]float32, 0, len(parents)*defaultNeighbourIpFeatureLength)
+		destNegNegFeature = make([]float32, 0, len(parents)*defaultNeighbourNeighbourIpFeatureLength)
 	)
 
 	for i, parent := range parents {
@@ -347,50 +347,50 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 	inferInputs := []*triton.ModelInferRequest_InferInputTensor{
 		{
 			Name:     "src",
-			Datatype: "FP64",
+			Datatype: "FP32",
 			Shape:    []int64{int64(len(parents)), defaultIPv4FeatureLength},
 			Contents: &triton.InferTensorContents{
-				Fp64Contents: srcFeature,
+				Fp32Contents: srcFeature,
 			},
 		},
 		{
 			Name:     "src_neg",
-			Datatype: "FP64",
+			Datatype: "FP32",
 			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, defaultIPv4FeatureLength},
 			Contents: &triton.InferTensorContents{
-				Fp64Contents: srcNegFeature,
+				Fp32Contents: srcNegFeature,
 			},
 		},
 		{
 			Name:     "src_neg_neg",
-			Datatype: "FP64",
+			Datatype: "FP32",
 			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, defaultAggregationNumber, defaultIPv4FeatureLength},
 			Contents: &triton.InferTensorContents{
-				Fp64Contents: srcNegNegFeature,
+				Fp32Contents: srcNegNegFeature,
 			},
 		},
 		{
 			Name:     "dst",
-			Datatype: "FP64",
+			Datatype: "FP32",
 			Shape:    []int64{int64(len(parents)), defaultIPv4FeatureLength},
 			Contents: &triton.InferTensorContents{
-				Fp64Contents: destFeature,
+				Fp32Contents: destFeature,
 			},
 		},
 		{
 			Name:     "dst_neg",
-			Datatype: "FP64",
+			Datatype: "FP32",
 			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, defaultIPv4FeatureLength},
 			Contents: &triton.InferTensorContents{
-				Fp64Contents: destNegFeature,
+				Fp32Contents: destNegFeature,
 			},
 		},
 		{
 			Name:     "dst_neg_neg",
-			Datatype: "FP64",
+			Datatype: "FP32",
 			Shape:    []int64{int64(len(parents)), defaultAggregationNumber, defaultAggregationNumber, defaultIPv4FeatureLength},
 			Contents: &triton.InferTensorContents{
-				Fp64Contents: destNegNegFeature,
+				Fp32Contents: destNegNegFeature,
 			},
 		},
 	}
@@ -414,8 +414,14 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 		return []float64{}, err
 	}
 
-	outputs := postprocess(inferResponse.RawOutputContents)
-	logger.Infof("%#v", outputs)
+	data := postprocess(inferResponse.RawOutputContents)
+	logger.Infof("%#v", data)
+	// TODO
+	outputs := make([]float64, len(data))
+	for i, v := range data {
+		outputs[i] = float64(v)
+	}
+
 	return outputs, nil
 }
 
@@ -462,33 +468,33 @@ func (e *evaluatorMachineLearning) aggregationHosts(host *resource.Host) ([]*res
 	return firstOrderNeighbours, secondOrderNeighbours, nil
 }
 
-// Convert output's raw bytes into float64 data (Little Endian).
-func postprocess(raw [][]byte) []float64 {
-	outputs := make([]float64, len(raw[0])/sizeFloat64)
+// Convert output's raw bytes into float32 data (Little Endian).
+func postprocess(raw [][]byte) []float32 {
+	outputs := make([]float32, len(raw[0])/sizeFloat32)
 	for i := range outputs {
-		offset := i * sizeFloat64
-		s := raw[0][offset : offset+sizeFloat64]
-		outputs[i] = byteToFloat64(s)
+		offset := i * sizeFloat32
+		s := raw[0][offset : offset+sizeFloat32]
+		outputs[i] = byteToFloat32(s)
 	}
 
 	return outputs
 }
 
-// Convert byte to float64.
-func byteToFloat64(v []byte) float64 {
-	bits := binary.LittleEndian.Uint64(v)
-	return math.Float64frombits(bits)
+// Convert byte to float32.
+func byteToFloat32(v []byte) float32 {
+	bits := binary.LittleEndian.Uint32(v)
+	return math.Float32frombits(bits)
 }
 
 // parseIP parses an ip address to a feature vector.
-func parseIP(ip string) []float64 {
-	var features = make([]float64, 32)
+func parseIP(ip string) []float32 {
+	var features = make([]float32, 32)
 	prase := net.ParseIP(ip).To4()
 	if prase != nil {
 		for i := 0; i < net.IPv4len; i++ {
 			d := prase[i]
 			for j := 0; j < 8; j++ {
-				features[i*8+j] = float64(d & 0x1)
+				features[i*8+j] = float32(d & 0x1)
 				d = d >> 1
 			}
 

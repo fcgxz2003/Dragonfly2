@@ -33,7 +33,7 @@ func TestEvaluatorMachineLearning_newEvaluatorMachineLearning(t *testing.T) {
 			name: "new evaluator commonv1",
 			expect: func(t *testing.T, e any) {
 				assert := assert.New(t)
-				assert.Equal(reflect.TypeOf(e).Elem().Name(), "evaluatorML")
+				assert.Equal(reflect.TypeOf(e).Elem().Name(), "evaluatorMachineLearning")
 			},
 		},
 	}
@@ -51,14 +51,14 @@ func TestEvaluatorMachineLearning_parseIP(t *testing.T) {
 	tests := []struct {
 		name   string
 		ip     string
-		expect func(t *testing.T, feature []float64)
+		expect func(t *testing.T, feature []float32)
 	}{
 		{
 			name: "parse ip to feature",
 			ip:   "172.0.0.1",
-			expect: func(t *testing.T, feature []float64) {
+			expect: func(t *testing.T, feature []float32) {
 				assert := assert.New(t)
-				assert.EqualValues(feature, []float64{
+				assert.EqualValues(feature, []float32{
 					0, 0, 1, 1, 0, 1, 0, 1,
 					0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0,
@@ -68,9 +68,9 @@ func TestEvaluatorMachineLearning_parseIP(t *testing.T) {
 		{
 			name: "parse ip to feature error",
 			ip:   "foo",
-			expect: func(t *testing.T, feature []float64) {
+			expect: func(t *testing.T, feature []float32) {
 				assert := assert.New(t)
-				assert.EqualValues(feature, []float64{
+				assert.EqualValues(feature, []float32{
 					0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0,
