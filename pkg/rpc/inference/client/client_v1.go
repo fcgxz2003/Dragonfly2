@@ -66,7 +66,7 @@ func GetV1(ctx context.Context, target string, opts ...grpc.DialOption) (V1, err
 				grpc_prometheus.StreamClientInterceptor,
 				grpc_zap.StreamClientInterceptor(logger.GrpcLogger.Desugar()),
 			)),
-			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(32768), grpc.MaxCallRecvMsgSize(32768)),
+			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(32768*2), grpc.MaxCallRecvMsgSize(32768*2)),
 		}, opts...)...,
 	)
 	if err != nil {

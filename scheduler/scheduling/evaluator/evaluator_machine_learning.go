@@ -278,7 +278,6 @@ func (e *evaluatorMachineLearning) IsBadNode(peer *resource.Peer) bool {
 }
 
 func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *resource.Peer) ([]float64, error) {
-	logger.Infof("parents number: %d", len(parents))
 	// Find the aggregation hosts for child.
 	childFirstOrderNeighbours, childSecondOrderNeighbours, err := e.aggregationHosts(child.Host, defaultAggregationNumber)
 	if err != nil {
