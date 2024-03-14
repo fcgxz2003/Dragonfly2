@@ -506,6 +506,7 @@ func (e *evaluatorMachineLearning) aggregationHosts(host *resource.Host, number 
 		}
 
 		logger.Info(len(neighbours))
+		logger.Info(neighbours)
 		if len(neighbours) == 0 {
 			for i := 0; i < number; i++ {
 				neighbours = append(neighbours, firstOrderNeighbour)
@@ -516,6 +517,7 @@ func (e *evaluatorMachineLearning) aggregationHosts(host *resource.Host, number 
 				neighbours = append(neighbours, neighbours[rand.Intn(n)])
 			}
 		}
+		logger.Info(neighbours)
 
 		secondOrderNeighbours = append(secondOrderNeighbours, neighbours)
 	}
