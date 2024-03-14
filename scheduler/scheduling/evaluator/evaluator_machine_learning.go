@@ -285,15 +285,12 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 		logger.Error(err)
 		return []float64{}, err
 	}
-	logger.Info(childFirstOrderNeighbours)
-	logger.Info(childSecondOrderNeighbours)
 
 	// Generate feature vector for child and its aggregation hosts.
 	childIPFeature, err := parseIP(child.Host.IP)
 	if err != nil {
 		return []float64{}, err
 	}
-	logger.Info(childIPFeature)
 
 	childNegIPFeatures := make([]float32, 0, defaultNeighbourIpFeatureLength)
 	for _, childFirstOrderNeighbour := range childFirstOrderNeighbours {
@@ -304,7 +301,6 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 
 		childNegIPFeatures = append(childNegIPFeatures, childNegIPFeature...)
 	}
-	logger.Info(childNegIPFeatures)
 
 	childNegNegIPFeatures := make([]float32, 0, defaultNeighbourNeighbourIpFeatureLength)
 	for _, childSecondOrderNeighbour := range childSecondOrderNeighbours {
@@ -317,7 +313,6 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 			childNegNegIPFeatures = append(childNegNegIPFeatures, childNegNegIPFeature...)
 		}
 	}
-	logger.Info(childNegNegIPFeatures)
 
 	var (
 		srcFeature       = make([]float32, 0, len(parents)*defaultIPv4FeatureLength)
@@ -331,10 +326,6 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 		srcNegFeature = append(srcNegFeature, childNegIPFeatures...)
 		srcNegNegFeature = append(srcNegNegFeature, childNegNegIPFeatures...)
 	}
-
-	logger.Info(srcFeature)
-	logger.Info(srcNegFeature)
-	logger.Info(srcNegNegFeature)
 
 	// Find the aggregation hosts for parents.
 	parentsFirstOrderNeighbours := make([][]*resource.Host, 0, defaultAggregationNumber)
@@ -350,9 +341,6 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 		parentsSecondOrderNeighbours = append(parentsSecondOrderNeighbours, parentSecondOrderNeighbours)
 	}
 
-	logger.Info(parentsFirstOrderNeighbours)
-	logger.Info(parentsSecondOrderNeighbours)
-
 	// Generate feature vector for parents and theirs aggregation hosts.
 	var (
 		destFeature       = make([]float32, 0, len(parents)*defaultIPv4FeatureLength)
@@ -367,7 +355,6 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 		}
 
 		destFeature = append(destFeature, feature...)
-		logger.Info(destFeature)
 
 		for _, parentFirstOrderNeighbours := range parentsFirstOrderNeighbours[i] {
 			feature, err := parseIP(parentFirstOrderNeighbours.IP)
@@ -377,7 +364,6 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 
 			destNegFeature = append(destNegFeature, feature...)
 		}
-		logger.Info(destNegFeature)
 
 		for _, parentSecondOrderNeighbours := range parentsSecondOrderNeighbours[i] {
 			for _, host := range parentSecondOrderNeighbours {
@@ -389,7 +375,6 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 				destNegNegFeature = append(destNegNegFeature, feature...)
 			}
 		}
-		logger.Info(destNegNegFeature)
 	}
 
 	inferInputs := []*triton.ModelInferRequest_InferInputTensor{
@@ -479,23 +464,18 @@ func (e *evaluatorMachineLearning) aggregationHosts(host *resource.Host, number 
 		return nil, nil, err
 	}
 
-	logger.Info(len(firstOrderNeighbours))
 	// If there is no neighbour host, using the root host as neighbour host.
 	// If there is no enough neighbour host, randomly select neighbour host.
-	if len(firstOrderNeighbours) == 0 {
+	var count = len(firstOrderNeighbours)
+	if count == 0 {
 		for i := 0; i < number; i++ {
 			firstOrderNeighbours = append(firstOrderNeighbours, host)
 		}
-	} else if len(firstOrderNeighbours) < number {
-		n := number - len(firstOrderNeighbours)
+	} else if count < number {
+		n := number - count
 		for i := 0; i < n; i++ {
-			firstOrderNeighbours = append(firstOrderNeighbours, firstOrderNeighbours[rand.Intn(n)])
+			firstOrderNeighbours = append(firstOrderNeighbours, firstOrderNeighbours[rand.Intn(count)])
 		}
-	}
-
-	logger.Info(len(firstOrderNeighbours))
-	for i := 0; i < len(firstOrderNeighbours); i++ {
-		logger.Info(firstOrderNeighbours[i].Hostname)
 	}
 
 	secondOrderNeighbours := make([][]*resource.Host, 0, number)
@@ -505,28 +485,19 @@ func (e *evaluatorMachineLearning) aggregationHosts(host *resource.Host, number 
 			return nil, nil, err
 		}
 
-		logger.Info(len(neighbours))
-		logger.Info(neighbours)
-		if len(neighbours) == 0 {
+		var count = len(neighbours)
+		if count == 0 {
 			for i := 0; i < number; i++ {
 				neighbours = append(neighbours, firstOrderNeighbour)
 			}
-		} else if len(neighbours) < number {
-			n := number - len(neighbours)
+		} else if count < number {
+			n := number - count
 			for i := 0; i < n; i++ {
-				neighbours = append(neighbours, neighbours[rand.Intn(n)])
+				neighbours = append(neighbours, neighbours[rand.Intn(count)])
 			}
 		}
-		logger.Info(neighbours)
 
 		secondOrderNeighbours = append(secondOrderNeighbours, neighbours)
-	}
-
-	logger.Info(len(secondOrderNeighbours))
-	for i := 0; i < len(secondOrderNeighbours); i++ {
-		for j := 0; j < len(secondOrderNeighbours[i]); j++ {
-			logger.Info(secondOrderNeighbours[i][j].Hostname)
-		}
 	}
 
 	return firstOrderNeighbours, secondOrderNeighbours, nil
