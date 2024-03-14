@@ -479,6 +479,7 @@ func (e *evaluatorMachineLearning) aggregationHosts(host *resource.Host, number 
 		return nil, nil, err
 	}
 
+	logger.Info(len(firstOrderNeighbours))
 	// If there is no neighbour host, using the root host as neighbour host.
 	// If there is no enough neighbour host, randomly select neighbour host.
 	if len(firstOrderNeighbours) == 0 {
@@ -494,7 +495,7 @@ func (e *evaluatorMachineLearning) aggregationHosts(host *resource.Host, number 
 
 	logger.Info(len(firstOrderNeighbours))
 	for i := 0; i < len(firstOrderNeighbours); i++ {
-		logger.Info(firstOrderNeighbours[i])
+		logger.Info(firstOrderNeighbours[i].Hostname)
 	}
 
 	secondOrderNeighbours := make([][]*resource.Host, 0, number)
@@ -504,6 +505,7 @@ func (e *evaluatorMachineLearning) aggregationHosts(host *resource.Host, number 
 			return nil, nil, err
 		}
 
+		logger.Info(len(neighbours))
 		if len(neighbours) == 0 {
 			for i := 0; i < number; i++ {
 				neighbours = append(neighbours, firstOrderNeighbour)
@@ -521,7 +523,7 @@ func (e *evaluatorMachineLearning) aggregationHosts(host *resource.Host, number 
 	logger.Info(len(secondOrderNeighbours))
 	for i := 0; i < len(secondOrderNeighbours); i++ {
 		for j := 0; j < len(secondOrderNeighbours[i]); j++ {
-			logger.Info(secondOrderNeighbours[i][j])
+			logger.Info(secondOrderNeighbours[i][j].Hostname)
 		}
 	}
 
