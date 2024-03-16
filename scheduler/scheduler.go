@@ -493,11 +493,8 @@ func (s *Server) Stop() {
 
 	// Stop inference client.
 	if s.inferenceClient != nil {
-		if err := s.inferenceClient.Close(); err != nil {
-			logger.Errorf("inference client failed to stop: %s", err.Error())
-		} else {
-			logger.Info("inference client closed")
-		}
+		s.inferenceClient.Close()
+		logger.Info("inference client closed")
 	}
 
 	// Stop GRPC server.
