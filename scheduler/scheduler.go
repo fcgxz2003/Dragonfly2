@@ -491,6 +491,12 @@ func (s *Server) Stop() {
 		logger.Info("network topology closed")
 	}
 
+	// Stop inference client.
+	if s.inferenceClient != nil {
+		s.inferenceClient.Close()
+		logger.Info("inference client closed")
+	}
+
 	// Stop GRPC server.
 	stopped := make(chan struct{})
 	go func() {
