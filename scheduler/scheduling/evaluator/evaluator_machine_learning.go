@@ -37,6 +37,7 @@ import (
 	"d7y.io/dragonfly/v2/pkg/types"
 	"d7y.io/dragonfly/v2/scheduler/networktopology"
 	"d7y.io/dragonfly/v2/scheduler/resource"
+	"d7y.io/dragonfly/v2/scheduler/storage"
 )
 
 const (
@@ -61,6 +62,7 @@ type evaluatorMachineLearning struct {
 	evaluator
 	inferenceClient inferenceclient.V1
 	networkTopology networktopology.NetworkTopology
+	storage         storage.Storage
 }
 
 // MachineLearningOption is a functional option for configuring the evaluatorMachineLearning.
@@ -77,6 +79,13 @@ func WithInferenceClient(client inferenceclient.V1) MachineLearningOption {
 func WithNetworkTopologyInMachineLearning(networkTopology networktopology.NetworkTopology) MachineLearningOption {
 	return func(e *evaluatorMachineLearning) {
 		e.networkTopology = networkTopology
+	}
+}
+
+// WithStorage sets the storage.
+func WithStorage(storage storage.Storage) MachineLearningOption {
+	return func(e *evaluatorMachineLearning) {
+		e.storage = storage
 	}
 }
 
@@ -447,10 +456,22 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 	}
 
 	data := postprocess(inferResponse.RawOutputContents)
-	// TODO
+	// Storage graphsage record.
 	outputs := make([]float64, len(data))
 	for i, v := range data {
 		outputs[i] = float64(v)
+		if err := e.storage.CreateGraphsage(storage.Graphsage{
+			SrcFeature:        srcFeature,
+			SrcNegFeature:     srcNegFeature,
+			SrcNegNegFeature:  srcNegNegFeature,
+			DestFeature:       destFeature,
+			DestNegFeature:    destNegFeature,
+			DestNegNegFeature: destNegNegFeature,
+			Predicted:         float64(v),
+		}); err != nil {
+			logger.Error(err)
+			continue
+		}
 	}
 
 	return outputs, nil

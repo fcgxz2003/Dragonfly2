@@ -310,6 +310,7 @@ func New(ctx context.Context, cfg *config.Config, d dfpath.Dfpath) (*Server, err
 		}
 
 		evaluatorMachineLearningOptions = append(evaluatorMachineLearningOptions, evaluator.WithInferenceClient(s.inferenceClient))
+		evaluatorMachineLearningOptions = append(evaluatorMachineLearningOptions, evaluator.WithStorage(s.storage))
 	}
 	evaluatorOptions = append(evaluatorOptions, evaluator.WithMachineLearningOption(evaluatorMachineLearningOptions))
 

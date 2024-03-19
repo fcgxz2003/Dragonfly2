@@ -300,36 +300,20 @@ type SrcNeighbourHost struct {
 	Hosts []Host `csv:"hosts" csv[]:"5"`
 }
 
-type DestNeighbourHost struct {
-	Hosts []Host `csv:"hosts" csv[]:"5"`
-}
-
 // Graphsage contains content for machine learning graphsage record.
 type Graphsage struct {
-	// ID is machine learning graphsage record id.
-	ID string `csv:"id"`
+	SrcFeature []float32 `csv:"srcFeature" csv[]:"32"`
 
-	// SrcHost is source host.
-	SrcHost Host `csv:"srcHost"`
+	SrcNegFeature []float32 `csv:"srcNegFeature" csv[]:"96"`
 
-	// SrcNeighbourHosts is the source neighbour hosts.
-	SrcNeighbourHosts SrcNeighbourHost `csv:"srcNeighbourHosts"`
+	SrcNegNegFeature []float32 `csv:"srcNegNegFeature" csv[]:"288"`
 
-	// SrcNeighbourNeighbourHosts is the source neighbour neighbour hosts.
-	SrcNeighbourNeighbourHosts []SrcNeighbourHost `csv:"srcNeighbourNeighbourHosts" csv[]:"5"`
+	DestFeature []float32 `csv:"destFeature" csv[]:"32"`
 
-	// DestHost is destination host.
-	DestHost Host `csv:"destHost"`
+	DestNegFeature []float32 `csv:"destNegFeature" csv[]:"96"`
 
-	// DestNeighbourHosts is the destination neighbour hosts.
-	DestNeighbourHosts DestNeighbourHost `csv:"destNeighbourHosts"`
-
-	// DestNeighbourNeighbourHosts is the destination neighbour neighbour hosts.
-	DestNeighbourNeighbourHosts []DestNeighbourHost `csv:"destNeighbourNeighbourHosts" csv[]:"5"`
+	DestNegNegFeature []float32 `csv:"destNegNegFeature" csv[]:"288"`
 
 	// Predicted is graphsage predicted value.
 	Predicted float64 `csv:"predicted"`
-
-	// Value is real value for training.
-	Value float64 `csv:"value"`
 }
