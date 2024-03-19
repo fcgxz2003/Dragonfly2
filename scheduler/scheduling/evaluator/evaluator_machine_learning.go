@@ -447,7 +447,6 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 	}
 
 	data := postprocess(inferResponse.RawOutputContents)
-	logger.Infof("%#v", data)
 	// TODO
 	outputs := make([]float64, len(data))
 	for i, v := range data {
