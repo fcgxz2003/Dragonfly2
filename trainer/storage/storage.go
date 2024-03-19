@@ -1,5 +1,5 @@
 /*
- *     Copyright 2023 The Dragonfly Authors
+ *     Copyright 2024 The Dragonfly Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,9 @@ const (
 	// NetworkTopologyFilePrefix is prefix of network topology file name.
 	NetworkTopologyFilePrefix = "networktopology"
 
+	// GraphsageFilePrefix is prefix of graphsage file name.
+	GraphsageFilePrefix = "graphsage"
+
 	// CSVFileExt is extension of file name.
 	CSVFileExt = "csv"
 )
@@ -48,17 +51,26 @@ type Storage interface {
 	// ListNetworkTopology returns network topologies in csv files based on the given model key.
 	ListNetworkTopology(string) ([]schedulerstorage.NetworkTopology, error)
 
+	// ListGraphsage returns graphsage records in csv file based on the given model key.
+	ListGraphsage(string) ([]schedulerstorage.Graphsage, error)
+
 	// OpenDownload opens download files for read based on the given model key, it returns io.ReadCloser of download files.
 	OpenDownload(string) (*os.File, error)
 
 	// OpenNetworkTopology opens network topology files for read based on the given model key, it returns io.ReadCloser of network topology files.
 	OpenNetworkTopology(string) (*os.File, error)
 
+	// OpenGraphsage opens graphsage record files for readbased on the given model key, it returns io.ReadCloser of download files.
+	OpenGraphsage(string) (*os.File, error)
+
 	// ClearDownload removes all downloads based on the given model key.
 	ClearDownload(string) error
 
 	// ClearNetworkTopology removes network topologies based on the given model key.
 	ClearNetworkTopology(string) error
+
+	// ClearGraphsage removes network topologies based on the given model key.
+	ClearGraphsage(string) error
 
 	// Clear removes all files.
 	Clear() error
@@ -112,6 +124,25 @@ func (s *storage) ListNetworkTopology(key string) (networkTopologies []scheduler
 	return networkTopologies, nil
 }
 
+// ListGraphsage returns all graphsage records in csv file.
+func (s *storage) ListGraphsage(key string) (graphsages []schedulerstorage.Graphsage, err error) {
+	file, err := s.OpenGraphsage(key)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if cerr := file.Close(); cerr != nil {
+			err = errors.Join(err, cerr)
+		}
+	}()
+
+	if err = gocsv.UnmarshalWithoutHeaders(file, &graphsages); err != nil {
+		return nil, err
+	}
+
+	return graphsages, nil
+}
+
 // OpenDownload opens download files for read based on the given model key, it returns io.ReadCloser of download files.
 func (s *storage) OpenDownload(key string) (*os.File, error) {
 	return os.OpenFile(s.downloadFilename(key), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
@@ -122,6 +153,11 @@ func (s *storage) OpenNetworkTopology(key string) (*os.File, error) {
 	return os.OpenFile(s.networkTopologyFilename(key), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
 }
 
+// OpenGraphsage opens graphsage records files for read based on the given model key, it returns io.ReadCloser of network topology files.
+func (s *storage) OpenGraphsage(key string) (*os.File, error) {
+	return os.OpenFile(s.graphsageFilename(key), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
+}
+
 // ClearDownload removes downloads based on the given model key.
 func (s *storage) ClearDownload(key string) error {
 	return os.Remove(s.downloadFilename(key))
@@ -130,6 +166,11 @@ func (s *storage) ClearDownload(key string) error {
 // ClearNetworkTopology removes network topologies based on the given model key.
 func (s *storage) ClearNetworkTopology(key string) error {
 	return os.Remove(s.networkTopologyFilename(key))
+}
+
+// ClearGraphsage removes graphsages based on the given model key.
+func (s *storage) ClearGraphsage(key string) error {
+	return os.Remove(s.graphsageFilename(key))
 }
 
 // Clear removes all files.
@@ -145,4 +186,9 @@ func (s *storage) downloadFilename(key string) string {
 // networkTopologyFilename generates network topology file name based on the given model key.
 func (s *storage) networkTopologyFilename(key string) string {
 	return filepath.Join(s.baseDir, fmt.Sprintf("%s_%s.%s", NetworkTopologyFilePrefix, key, CSVFileExt))
+}
+
+// graphsageFilename generates network topology file name based on the given model key.
+func (s *storage) graphsageFilename(key string) string {
+	return filepath.Join(s.baseDir, fmt.Sprintf("%s_%s.%s", GraphsageFilePrefix, key, CSVFileExt))
 }

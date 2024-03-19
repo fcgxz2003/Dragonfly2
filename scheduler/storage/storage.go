@@ -75,7 +75,7 @@ type Storage interface {
 	// ListNetworkTopology returns all network topologies in csv file.
 	ListNetworkTopology() ([]NetworkTopology, error)
 
-	// ListGraphsage returns all graphsage record in csv file.
+	// ListGraphsage returns all graphsage records in csv file.
 	ListGraphsage() ([]Graphsage, error)
 
 	// DownloadCount returns the count of downloads.

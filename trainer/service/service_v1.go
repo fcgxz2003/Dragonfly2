@@ -63,6 +63,7 @@ func (v *V1) Train(stream trainerv1.Trainer_TrainServer) error {
 		hostID              string
 		networkTopologyFile io.WriteCloser
 		downloadFile        io.WriteCloser
+		graphsageFile       io.WriteCloser
 		req                 *trainerv1.TrainRequest
 		initialized         bool
 		err                 error
@@ -121,16 +122,42 @@ func (v *V1) Train(stream trainerv1.Trainer_TrainServer) error {
 					}
 				}
 			}()
+
+			// Open graphsage record file and store received data.
+			graphsageFile, err = v.storage.OpenGraphsage(hostID)
+			if err != nil {
+				msg := fmt.Sprintf("open graphsage record failed: %s", err.Error())
+				logger.Error(msg)
+				return status.Error(codes.Internal, msg)
+			}
+			defer func() {
+				graphsageFile.Close()
+
+				// If error occurred, clear graphsage.
+				if err != nil && err != io.EOF {
+					if err := v.storage.ClearGraphsage(hostID); err != nil {
+						logger.Errorf("clear graphsage record failed: %s", err.Error())
+					}
+				}
+			}()
 		}
 
 		switch trainRequest := req.GetRequest().(type) {
 		case *trainerv1.TrainRequest_TrainGnnRequest:
-			// Store network topology.
-			if _, err := networkTopologyFile.Write(trainRequest.TrainGnnRequest.Dataset); err != nil {
-				msg := fmt.Sprintf("write network topology failed: %s", err.Error())
+			// // Store network topology.
+			// if _, err := networkTopologyFile.Write(trainRequest.TrainGnnRequest.Dataset); err != nil {
+			// 	msg := fmt.Sprintf("write network topology failed: %s", err.Error())
+			// 	logger.Error(msg)
+			// 	return status.Error(codes.Internal, msg)
+			// }
+
+			// Store graphsage record
+			if _, err := graphsageFile.Write(trainRequest.TrainGnnRequest.Dataset); err != nil {
+				msg := fmt.Sprintf("write graphsage record failed: %s", err.Error())
 				logger.Error(msg)
 				return status.Error(codes.Internal, msg)
 			}
+
 		case *trainerv1.TrainRequest_TrainMlpRequest:
 			// Store download.
 			if _, err := downloadFile.Write(trainRequest.TrainMlpRequest.Dataset); err != nil {

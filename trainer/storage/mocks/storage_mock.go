@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mocks/storage_mock.go -source storage.go -package mocks
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -67,6 +68,20 @@ func (mr *MockStorageMockRecorder) ClearDownload(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearDownload", reflect.TypeOf((*MockStorage)(nil).ClearDownload), arg0)
 }
 
+// ClearGraphsage mocks base method.
+func (m *MockStorage) ClearGraphsage(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClearGraphsage", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ClearGraphsage indicates an expected call of ClearGraphsage.
+func (mr *MockStorageMockRecorder) ClearGraphsage(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearGraphsage", reflect.TypeOf((*MockStorage)(nil).ClearGraphsage), arg0)
+}
+
 // ClearNetworkTopology mocks base method.
 func (m *MockStorage) ClearNetworkTopology(arg0 string) error {
 	m.ctrl.T.Helper()
@@ -94,6 +109,21 @@ func (m *MockStorage) ListDownload(arg0 string) ([]storage.Download, error) {
 func (mr *MockStorageMockRecorder) ListDownload(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDownload", reflect.TypeOf((*MockStorage)(nil).ListDownload), arg0)
+}
+
+// ListGraphsage mocks base method.
+func (m *MockStorage) ListGraphsage(arg0 string) ([]storage.Graphsage, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListGraphsage", arg0)
+	ret0, _ := ret[0].([]storage.Graphsage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListGraphsage indicates an expected call of ListGraphsage.
+func (mr *MockStorageMockRecorder) ListGraphsage(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListGraphsage", reflect.TypeOf((*MockStorage)(nil).ListGraphsage), arg0)
 }
 
 // ListNetworkTopology mocks base method.
@@ -124,6 +154,21 @@ func (m *MockStorage) OpenDownload(arg0 string) (*os.File, error) {
 func (mr *MockStorageMockRecorder) OpenDownload(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OpenDownload", reflect.TypeOf((*MockStorage)(nil).OpenDownload), arg0)
+}
+
+// OpenGraphsage mocks base method.
+func (m *MockStorage) OpenGraphsage(arg0 string) (*os.File, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "OpenGraphsage", arg0)
+	ret0, _ := ret[0].(*os.File)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// OpenGraphsage indicates an expected call of OpenGraphsage.
+func (mr *MockStorageMockRecorder) OpenGraphsage(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OpenGraphsage", reflect.TypeOf((*MockStorage)(nil).OpenGraphsage), arg0)
 }
 
 // OpenNetworkTopology mocks base method.

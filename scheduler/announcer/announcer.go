@@ -153,8 +153,12 @@ func (a *announcer) train() error {
 		return a.uploadDownloadToTrainer(stream)
 	})
 
+	// eg.Go(func() error {
+	// 	return a.uploadNetworkTopologyToTrainer(stream)
+	// })
+
 	eg.Go(func() error {
-		return a.uploadNetworkTopologyToTrainer(stream)
+		return a.uploadGraphsageToTrainer(stream)
 	})
 
 	if err := eg.Wait(); err != nil {
@@ -204,6 +208,39 @@ func (a *announcer) uploadDownloadToTrainer(stream trainerv1.Trainer_TrainClient
 // uploadNetworkTopologyToTrainer uploads network topology to trainer.
 func (a *announcer) uploadNetworkTopologyToTrainer(stream trainerv1.Trainer_TrainClient) error {
 	readCloser, err := a.storage.OpenNetworkTopology()
+	if err != nil {
+		return err
+	}
+	defer readCloser.Close()
+
+	buf := make([]byte, defaultUploadBufferSize)
+	for {
+		n, err := readCloser.Read(buf)
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+
+			return err
+		}
+
+		if err := stream.Send(&trainerv1.TrainRequest{
+			Hostname: a.config.Server.Host,
+			Ip:       a.config.Server.AdvertiseIP.String(),
+			Request: &trainerv1.TrainRequest_TrainGnnRequest{
+				TrainGnnRequest: &trainerv1.TrainGNNRequest{
+					Dataset: buf[:n],
+				},
+			},
+		}); err != nil {
+			return err
+		}
+	}
+}
+
+// uploadGraphsageToTrainer uploads graphsage records to trainer.
+func (a *announcer) uploadGraphsageToTrainer(stream trainerv1.Trainer_TrainClient) error {
+	readCloser, err := a.storage.OpenGraphsage()
 	if err != nil {
 		return err
 	}
