@@ -99,11 +99,15 @@ type Storage interface {
 	// ClearDownload removes all download files.
 	ClearDownload() error
 
+	ClearDownloadContent() error
+
 	// ClearNetworkTopology removes all network topology files.
 	ClearNetworkTopology() error
 
 	// ClearGraphsage removes all graphsage record files.
 	ClearGraphsage() error
+
+	ClearGraphsageContent() error
 }
 
 // storage provides storage function.
@@ -491,6 +495,32 @@ func (s *storage) ClearDownload() error {
 	return nil
 }
 
+// ClearDownloadContent removes all downloads contents.
+func (s *storage) ClearDownloadContent() error {
+	s.downloadMu.Lock()
+	defer s.downloadMu.Unlock()
+
+	fileInfos, err := s.downloadBackups()
+	if err != nil {
+		return err
+	}
+
+	for _, fileInfo := range fileInfos {
+		filename := filepath.Join(s.baseDir, fileInfo.Name())
+		if err := os.Remove(filename); err != nil {
+			return err
+		}
+	}
+
+	downloadFile, err := os.OpenFile(s.downloadFilename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return nil
+	}
+	downloadFile.Close()
+
+	return nil
+}
+
 // ClearNetworkTopology removes all network topologies.
 func (s *storage) ClearNetworkTopology() error {
 	s.networkTopologyMu.Lock()
@@ -527,6 +557,32 @@ func (s *storage) ClearGraphsage() error {
 			return err
 		}
 	}
+
+	return nil
+}
+
+// ClearGraphsage removes all graphsage record contents.
+func (s *storage) ClearGraphsageContent() error {
+	s.graphsageMu.Lock()
+	defer s.graphsageMu.Unlock()
+
+	fileInfos, err := s.graphsageBackups()
+	if err != nil {
+		return err
+	}
+
+	for _, fileInfo := range fileInfos {
+		filename := filepath.Join(s.baseDir, fileInfo.Name())
+		if err := os.Remove(filename); err != nil {
+			return err
+		}
+	}
+
+	graphsageFile, err := os.OpenFile(s.graphsageFilename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return nil
+	}
+	graphsageFile.Close()
 
 	return nil
 }

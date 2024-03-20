@@ -54,6 +54,20 @@ func (mr *MockStorageMockRecorder) ClearDownload() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearDownload", reflect.TypeOf((*MockStorage)(nil).ClearDownload))
 }
 
+// ClearDownloadContent mocks base method.
+func (m *MockStorage) ClearDownloadContent() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClearDownloadContent")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ClearDownloadContent indicates an expected call of ClearDownloadContent.
+func (mr *MockStorageMockRecorder) ClearDownloadContent() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearDownloadContent", reflect.TypeOf((*MockStorage)(nil).ClearDownloadContent))
+}
+
 // ClearGraphsage mocks base method.
 func (m *MockStorage) ClearGraphsage() error {
 	m.ctrl.T.Helper()
@@ -66,6 +80,20 @@ func (m *MockStorage) ClearGraphsage() error {
 func (mr *MockStorageMockRecorder) ClearGraphsage() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearGraphsage", reflect.TypeOf((*MockStorage)(nil).ClearGraphsage))
+}
+
+// ClearGraphsageContent mocks base method.
+func (m *MockStorage) ClearGraphsageContent() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClearGraphsageContent")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ClearGraphsageContent indicates an expected call of ClearGraphsageContent.
+func (mr *MockStorageMockRecorder) ClearGraphsageContent() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearGraphsageContent", reflect.TypeOf((*MockStorage)(nil).ClearGraphsageContent))
 }
 
 // ClearNetworkTopology mocks base method.
