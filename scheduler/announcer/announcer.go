@@ -169,6 +169,14 @@ func (a *announcer) train() error {
 		return err
 	}
 
+	if err := a.storage.ClearDownload(); err != nil {
+		return err
+	}
+
+	if err := a.storage.ClearGraphsage(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
