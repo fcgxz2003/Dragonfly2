@@ -80,8 +80,15 @@ func (t *training) Train(ctx context.Context, ip, hostname string) error {
 		return err
 	}
 
-	// Clean up training data.
-	if err := t.storage.Clear(); err != nil {
+	var hostID = idgen.HostIDV2(ip, hostname)
+	// Clean up download data.
+	if err := t.storage.ClearDownload(hostID); err != nil {
+		logger.Error(err)
+		return err
+	}
+
+	// Clean up graphsage records data.
+	if err := t.storage.ClearGraphsage(hostID); err != nil {
 		logger.Error(err)
 		return err
 	}
