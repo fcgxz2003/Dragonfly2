@@ -58,15 +58,14 @@ func NewV1(
 // Train implements the Trainer.Train method.
 func (v *V1) Train(stream trainerv1.Trainer_TrainServer) error {
 	var (
-		ip                  string
-		hostname            string
-		hostID              string
-		networkTopologyFile io.WriteCloser
-		downloadFile        io.WriteCloser
-		graphsageFile       io.WriteCloser
-		req                 *trainerv1.TrainRequest
-		initialized         bool
-		err                 error
+		ip            string
+		hostname      string
+		hostID        string
+		downloadFile  io.WriteCloser
+		graphsageFile io.WriteCloser
+		req           *trainerv1.TrainRequest
+		initialized   bool
+		err           error
 	)
 
 	for {
@@ -86,24 +85,6 @@ func (v *V1) Train(stream trainerv1.Trainer_TrainServer) error {
 			ip = req.Ip
 			hostname = req.Hostname
 			hostID = idgen.HostIDV2(req.Ip, req.Hostname)
-
-			// Open network topology file and store received data.
-			networkTopologyFile, err = v.storage.OpenNetworkTopology(hostID)
-			if err != nil {
-				msg := fmt.Sprintf("open network topology failed: %s", err.Error())
-				logger.Error(msg)
-				return status.Error(codes.Internal, msg)
-			}
-			defer func() {
-				networkTopologyFile.Close()
-
-				// If error occurred, clear network topology.
-				if err != nil && err != io.EOF {
-					if err := v.storage.ClearNetworkTopology(hostID); err != nil {
-						logger.Errorf("clear network topology failed: %s", err.Error())
-					}
-				}
-			}()
 
 			// Open download file and store received data.
 			downloadFile, err = v.storage.OpenDownload(hostID)
