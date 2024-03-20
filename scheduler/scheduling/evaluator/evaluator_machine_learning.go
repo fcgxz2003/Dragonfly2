@@ -25,16 +25,13 @@ import (
 	"math/rand"
 	"net"
 	"sort"
-	"strings"
 	"unsafe"
 
 	"github.com/montanaflynn/stats"
 
 	triton "d7y.io/api/v2/pkg/apis/inference"
 	logger "d7y.io/dragonfly/v2/internal/dflog"
-	mathematics "d7y.io/dragonfly/v2/pkg/math"
 	inferenceclient "d7y.io/dragonfly/v2/pkg/rpc/inference/client"
-	"d7y.io/dragonfly/v2/pkg/types"
 	"d7y.io/dragonfly/v2/scheduler/networktopology"
 	"d7y.io/dragonfly/v2/scheduler/resource"
 	"d7y.io/dragonfly/v2/scheduler/storage"
@@ -115,137 +112,13 @@ func (e *evaluatorMachineLearning) EvaluateParents(parents []*resource.Peer, chi
 func (e *evaluatorMachineLearning) evaluate(parents []*resource.Peer, child *resource.Peer, totalPieceCount int32) []float64 {
 	scores, err := e.inference(parents, child)
 	if err != nil {
-		logger.Info("using evaluate base algorithm")
+		logger.Errorf("machine learining algorithm error:", err)
 		scores := make([]float64, len(parents))
-		for i, parent := range parents {
-			scores[i] = e.evaluateBase(parent, child, totalPieceCount)
-		}
-
 		return scores
 	}
 
 	logger.Info("using machine learining algorithm")
 	return scores
-}
-
-// The larger the value, the higher the priority.
-func (e *evaluatorMachineLearning) evaluateBase(parent *resource.Peer, child *resource.Peer, totalPieceCount int32) float64 {
-	parentLocation := parent.Host.Network.Location
-	parentIDC := parent.Host.Network.IDC
-	childLocation := child.Host.Network.Location
-	childIDC := child.Host.Network.IDC
-
-	return finishedPieceWeight*e.calculatePieceScore(parent, child, totalPieceCount) +
-		parentHostUploadSuccessWeight*e.calculateParentHostUploadSuccessScore(parent) +
-		freeUploadWeight*e.calculateFreeUploadScore(parent.Host) +
-		hostTypeWeight*e.calculateHostTypeScore(parent) +
-		idcAffinityWeight*e.calculateIDCAffinityScore(parentIDC, childIDC) +
-		locationAffinityWeight*e.calculateMultiElementAffinityScore(parentLocation, childLocation)
-}
-
-// calculatePieceScore 0.0~unlimited larger and better.
-func (e *evaluatorMachineLearning) calculatePieceScore(parent *resource.Peer, child *resource.Peer, totalPieceCount int32) float64 {
-	// If the total piece is determined, normalize the number of
-	// pieces downloaded by the parent node.
-	if totalPieceCount > 0 {
-		finishedPieceCount := parent.FinishedPieces.Count()
-		return float64(finishedPieceCount) / float64(totalPieceCount)
-	}
-
-	// Use the difference between the parent node and the child node to
-	// download the piece to roughly represent the piece score.
-	parentFinishedPieceCount := parent.FinishedPieces.Count()
-	childFinishedPieceCount := child.FinishedPieces.Count()
-	return float64(parentFinishedPieceCount) - float64(childFinishedPieceCount)
-}
-
-// calculateParentHostUploadSuccessScore 0.0~unlimited larger and better.
-func (e *evaluatorMachineLearning) calculateParentHostUploadSuccessScore(peer *resource.Peer) float64 {
-	uploadCount := peer.Host.UploadCount.Load()
-	uploadFailedCount := peer.Host.UploadFailedCount.Load()
-	if uploadCount < uploadFailedCount {
-		return minScore
-	}
-
-	// Host has not been scheduled, then it is scheduled first.
-	if uploadCount == 0 && uploadFailedCount == 0 {
-		return maxScore
-	}
-
-	return float64(uploadCount-uploadFailedCount) / float64(uploadCount)
-}
-
-// calculateFreeUploadScore 0.0~1.0 larger and better.
-func (e *evaluatorMachineLearning) calculateFreeUploadScore(host *resource.Host) float64 {
-	ConcurrentUploadLimit := host.ConcurrentUploadLimit.Load()
-	freeUploadCount := host.FreeUploadCount()
-	if ConcurrentUploadLimit > 0 && freeUploadCount > 0 {
-		return float64(freeUploadCount) / float64(ConcurrentUploadLimit)
-	}
-
-	return minScore
-}
-
-// calculateHostTypeScore 0.0~1.0 larger and better.
-func (e *evaluatorMachineLearning) calculateHostTypeScore(peer *resource.Peer) float64 {
-	// When the task is downloaded for the first time,
-	// peer will be scheduled to seed peer first,
-	// otherwise it will be scheduled to dfdaemon first.
-	if peer.Host.Type != types.HostTypeNormal {
-		if peer.FSM.Is(resource.PeerStateReceivedNormal) ||
-			peer.FSM.Is(resource.PeerStateRunning) {
-			return maxScore
-		}
-
-		return minScore
-	}
-
-	return maxScore * 0.5
-}
-
-// calculateIDCAffinityScore 0.0~1.0 larger and better.
-func (e *evaluatorMachineLearning) calculateIDCAffinityScore(dst, src string) float64 {
-	if dst == "" || src == "" {
-		return minScore
-	}
-
-	if strings.EqualFold(dst, src) {
-		return maxScore
-	}
-
-	return minScore
-}
-
-// calculateMultiElementAffinityScore 0.0~1.0 larger and better.
-func (e *evaluatorMachineLearning) calculateMultiElementAffinityScore(dst, src string) float64 {
-	if dst == "" || src == "" {
-		return minScore
-	}
-
-	if strings.EqualFold(dst, src) {
-		return maxScore
-	}
-
-	// Calculate the number of multi-element matches divided by "|".
-	var score, elementLen int
-	dstElements := strings.Split(dst, types.AffinitySeparator)
-	srcElements := strings.Split(src, types.AffinitySeparator)
-	elementLen = mathematics.Min(len(dstElements), len(srcElements))
-
-	// Maximum element length is 5.
-	if elementLen > maxElementLen {
-		elementLen = maxElementLen
-	}
-
-	for i := 0; i < elementLen; i++ {
-		if !strings.EqualFold(dstElements[i], srcElements[i]) {
-			break
-		}
-
-		score++
-	}
-
-	return float64(score) / float64(maxElementLen)
 }
 
 func (e *evaluatorMachineLearning) IsBadNode(peer *resource.Peer) bool {
@@ -461,6 +334,33 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 	for i, v := range data {
 		outputs[i] = float64(v)
 		if err := e.storage.CreateGraphsage(storage.Graphsage{
+			ID: child.ID,
+			SrcHost: storage.GraphsageHost{
+				ID:       child.Host.ID,
+				Type:     child.Host.Type.Name(),
+				Hostname: child.Host.Hostname,
+				IP:       child.Host.IP,
+				Port:     child.Host.Port,
+				Network: resource.Network{
+					TCPConnectionCount:       child.Host.Network.TCPConnectionCount,
+					UploadTCPConnectionCount: child.Host.Network.UploadTCPConnectionCount,
+					Location:                 child.Host.Network.Location,
+					IDC:                      child.Host.Network.IDC,
+				},
+			},
+			DestHost: storage.GraphsageHost{
+				ID:       parents[i].Host.ID,
+				Type:     parents[i].Host.Type.Name(),
+				Hostname: parents[i].Host.Hostname,
+				IP:       parents[i].Host.IP,
+				Port:     parents[i].Host.Port,
+				Network: resource.Network{
+					TCPConnectionCount:       parents[i].Host.Network.TCPConnectionCount,
+					UploadTCPConnectionCount: parents[i].Host.Network.UploadTCPConnectionCount,
+					Location:                 parents[i].Host.Network.Location,
+					IDC:                      parents[i].Host.Network.IDC,
+				},
+			},
 			SrcFeature:        srcFeature,
 			SrcNegFeature:     srcNegFeature,
 			SrcNegNegFeature:  srcNegNegFeature,

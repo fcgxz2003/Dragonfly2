@@ -296,16 +296,24 @@ type NetworkTopology struct {
 	CreatedAt int64 `csv:"createdAt"`
 }
 
-type SrcNeighbourHost struct {
-	Hosts []Host `csv:"hosts" csv[]:"5"`
+type GraphsageHost struct {
+	ID       string           `csv:"id"`
+	Type     string           `csv:"type"`
+	Hostname string           `csv:"hostname"`
+	IP       string           `csv:"ip"`
+	Port     int32            `csv:"port"`
+	Network  resource.Network `csv:"network"`
 }
 
 // Graphsage contains content for machine learning graphsage record.
 type Graphsage struct {
-	SrcFeature        []float32 `csv:"srcFeature" csv[]:"32"`
-	SrcNegFeature     []float32 `csv:"srcNegFeature" csv[]:"96"`
-	SrcNegNegFeature  []float32 `csv:"srcNegNegFeature" csv[]:"288"`
-	DestFeature       []float32 `csv:"destFeature" csv[]:"32"`
-	DestNegFeature    []float32 `csv:"destNegFeature" csv[]:"96"`
-	DestNegNegFeature []float32 `csv:"destNegNegFeature" csv[]:"288"`
+	ID                string        `csv:"id"`
+	SrcHost           GraphsageHost `csv:"srcHost"`
+	DestHost          GraphsageHost `csv:"destHost"`
+	SrcFeature        []float32     `csv:"srcFeature" csv[]:"32"`
+	SrcNegFeature     []float32     `csv:"srcNegFeature" csv[]:"96"`
+	SrcNegNegFeature  []float32     `csv:"srcNegNegFeature" csv[]:"288"`
+	DestFeature       []float32     `csv:"destFeature" csv[]:"32"`
+	DestNegFeature    []float32     `csv:"destNegFeature" csv[]:"96"`
+	DestNegNegFeature []float32     `csv:"destNegNegFeature" csv[]:"288"`
 }
