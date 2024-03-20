@@ -302,18 +302,10 @@ type SrcNeighbourHost struct {
 
 // Graphsage contains content for machine learning graphsage record.
 type Graphsage struct {
-	SrcFeature []float32 `csv:"srcFeature" csv[]:"32"`
-
-	SrcNegFeature []float32 `csv:"srcNegFeature" csv[]:"96"`
-
-	SrcNegNegFeature []float32 `csv:"srcNegNegFeature" csv[]:"288"`
-
-	DestFeature []float32 `csv:"destFeature" csv[]:"32"`
-
-	DestNegFeature []float32 `csv:"destNegFeature" csv[]:"96"`
-
+	SrcFeature        []float32 `csv:"srcFeature" csv[]:"32"`
+	SrcNegFeature     []float32 `csv:"srcNegFeature" csv[]:"96"`
+	SrcNegNegFeature  []float32 `csv:"srcNegNegFeature" csv[]:"288"`
+	DestFeature       []float32 `csv:"destFeature" csv[]:"32"`
+	DestNegFeature    []float32 `csv:"destNegFeature" csv[]:"96"`
 	DestNegNegFeature []float32 `csv:"destNegNegFeature" csv[]:"288"`
-
-	// Predicted is graphsage predicted value.
-	Predicted float64 `csv:"predicted"`
 }

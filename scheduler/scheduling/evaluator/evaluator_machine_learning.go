@@ -467,7 +467,6 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 			DestFeature:       destFeature,
 			DestNegFeature:    destNegFeature,
 			DestNegNegFeature: destNegNegFeature,
-			Predicted:         float64(v),
 		}); err != nil {
 			logger.Error(err)
 			continue
