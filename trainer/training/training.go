@@ -75,7 +75,7 @@ func New(cfg *config.Config, managerClient managerclient.V2, storage storage.Sto
 
 // Train begins training GNN and MLP model.
 func (t *training) Train(ctx context.Context, ip, hostname string) error {
-	if err := t.preprocess(ctx, ip, hostname); err != nil {
+	if err := t.preprocess(ip, hostname); err != nil {
 		logger.Error(err)
 		return err
 	}
@@ -89,7 +89,7 @@ func (t *training) Train(ctx context.Context, ip, hostname string) error {
 	return nil
 }
 
-func (t *training) preprocess(ctx context.Context, ip, hostname string) error {
+func (t *training) preprocess(ip, hostname string) error {
 	var hostID = idgen.HostIDV2(ip, hostname)
 	// Preprocess download training data.
 	downloadFile, err := t.storage.OpenDownload(hostID)
@@ -219,24 +219,4 @@ func makeKeyInTrainer(namespace, id string) string {
 // makeBandwidthKeyInTrainer make bandwidth key in trainer.
 func makeBandwidthKeyInTrainer(srcHostID, destHostID string) string {
 	return makeKeyInTrainer(BandwidthNamespace, fmt.Sprintf("%s:%s", srcHostID, destHostID))
-}
-
-// TODO Add training GNN logic.
-// trainGNN trains GNN model.
-func (t *training) trainGNN(ctx context.Context, ip, hostname string) error {
-	// 1. Get training data from storage.
-	// 2. Preprocess training data.
-	// 2. Train GNN model.
-	// 3. Upload GNN model to manager service.
-	return nil
-}
-
-// TODO Add training MLP logic.
-// trainMLP trains MLP model.
-func (t *training) trainMLP(ctx context.Context, ip, hostname string) error {
-	// 1. Get training data from storage.
-	// 2. Preprocess training data.
-	// 2. Train MLP model.
-	// 3. Upload MLP model to manager service.
-	return nil
 }
