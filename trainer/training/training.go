@@ -99,6 +99,7 @@ func (t *training) Train(ctx context.Context, ip, hostname string) error {
 func (t *training) preprocess(ip, hostname string) error {
 	var hostID = idgen.HostIDV2(ip, hostname)
 	// Preprocess download training data.
+	logger.Info("loading download.csv")
 	downloadFile, err := t.storage.OpenDownload(hostID)
 	if err != nil {
 		msg := fmt.Sprintf("open download failed: %s", err.Error())
@@ -140,6 +141,7 @@ func (t *training) preprocess(ip, hostname string) error {
 	}
 
 	// Preprocess graphsage training data.
+	logger.Info("loading graphsage.csv")
 	graphsageFile, err := t.storage.OpenGraphsage(hostID)
 	if err != nil {
 		msg := fmt.Sprintf("open graphsage records failed: %s", err.Error())

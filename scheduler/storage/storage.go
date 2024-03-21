@@ -497,19 +497,9 @@ func (s *storage) ClearDownload() error {
 
 // ClearDownloadContent removes all downloads contents.
 func (s *storage) ClearDownloadContent() error {
-	s.downloadMu.Lock()
-	defer s.downloadMu.Unlock()
-
-	fileInfos, err := s.downloadBackups()
-	if err != nil {
+	if err := s.ClearDownload(); err != nil {
+		logger.Info(err)
 		return err
-	}
-
-	for _, fileInfo := range fileInfos {
-		filename := filepath.Join(s.baseDir, fileInfo.Name())
-		if err := os.Remove(filename); err != nil {
-			return err
-		}
 	}
 
 	downloadFile, err := os.OpenFile(s.downloadFilename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
@@ -563,19 +553,9 @@ func (s *storage) ClearGraphsage() error {
 
 // ClearGraphsage removes all graphsage record contents.
 func (s *storage) ClearGraphsageContent() error {
-	s.graphsageMu.Lock()
-	defer s.graphsageMu.Unlock()
-
-	fileInfos, err := s.graphsageBackups()
-	if err != nil {
+	if err := s.ClearGraphsage(); err != nil {
+		logger.Info(err)
 		return err
-	}
-
-	for _, fileInfo := range fileInfos {
-		filename := filepath.Join(s.baseDir, fileInfo.Name())
-		if err := os.Remove(filename); err != nil {
-			return err
-		}
 	}
 
 	graphsageFile, err := os.OpenFile(s.graphsageFilename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
