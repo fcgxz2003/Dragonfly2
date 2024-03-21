@@ -16,11 +16,12 @@
 
 package training
 
-type Records struct {
-	SrcFeature        [][]float32
-	SrcNegFeature     [][][]float32
-	SrcNegNegFeature  [][][][]float32
-	DestFeature       [][]float32
-	DestNegFeature    [][][]float32
-	DestNegNegFeature [][][][]float32
+type Record struct {
+	SrcFeature        []float32
+	SrcNegFeature     [][]float32
+	SrcNegNegFeature  [][][]float32
+	DestFeature       []float32
+	DestNegFeature    [][]float32
+	DestNegNegFeature [][][]float32
+	Bandwidth         float32
 }

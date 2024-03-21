@@ -108,7 +108,7 @@ func (t *training) preprocess(ip, hostname string) error {
 	}
 	defer downloadFile.Close()
 
-	// bandwidths := make(map[string]float64)
+	bandwidths := make(map[string]float32)
 	dc := make(chan schedulerstorage.Download)
 	go func() {
 		if gocsv.UnmarshalToChanWithoutHeaders(downloadFile, dc) != nil {
@@ -117,27 +117,27 @@ func (t *training) preprocess(ip, hostname string) error {
 	}()
 	for download := range dc {
 		logger.Info(download)
-		// for _, parent := range download.Parents {
-		// 	if parent.ID != "" {
-		// 		// get maxBandwidth locally from pieces.
-		// 		var localMaxBandwidth float64
-		// 		for _, piece := range parent.Pieces {
-		// 			if piece.Cost > 0 && float64(piece.Length/piece.Cost) > localMaxBandwidth {
-		// 				localMaxBandwidth = float64(piece.Length / piece.Cost)
-		// 			}
-		// 		}
+		for _, parent := range download.Parents {
+			if parent.ID != "" {
+				// get maxBandwidth locally from pieces.
+				var localMaxBandwidth float32
+				for _, piece := range parent.Pieces {
+					if piece.Cost > 0 && float32(piece.Length/piece.Cost) > localMaxBandwidth {
+						localMaxBandwidth = float32(piece.Length / piece.Cost)
+					}
+				}
 
-		// 		// updata maxBandwidth globally.
-		// 		key := makeBandwidthKeyInTrainer(download.Host.IP, parent.Host.IP)
-		// 		if value, ok := bandwidths[key]; ok {
-		// 			if localMaxBandwidth > value {
-		// 				bandwidths[key] = localMaxBandwidth
-		// 			}
-		// 		} else {
-		// 			bandwidths[key] = localMaxBandwidth
-		// 		}
-		// 	}
-		// }
+				// updata maxBandwidth globally.
+				key := makeBandwidthKeyInTrainer(download.ID, download.Host.IP, parent.Host.IP)
+				if value, ok := bandwidths[key]; ok {
+					if localMaxBandwidth > value {
+						bandwidths[key] = localMaxBandwidth
+					}
+				} else {
+					bandwidths[key] = localMaxBandwidth
+				}
+			}
+		}
 	}
 
 	// Preprocess graphsage training data.
@@ -150,7 +150,7 @@ func (t *training) preprocess(ip, hostname string) error {
 	}
 	defer graphsageFile.Close()
 
-	// records := Records{}
+	records := make([]Record, 0)
 	gc := make(chan schedulerstorage.Graphsage)
 	go func() {
 		if gocsv.UnmarshalToChanWithoutHeaders(graphsageFile, gc) != nil {
@@ -159,54 +159,57 @@ func (t *training) preprocess(ip, hostname string) error {
 	}()
 	for graphsage := range gc {
 		logger.Info(graphsage)
-		// // root.
-		// records.SrcFeature = append(records.SrcFeature, graphsage.SrcFeature)
-		// records.DestFeature = append(records.DestFeature, graphsage.DestFeature)
+		key := makeBandwidthKeyInTrainer(graphsage.ID, graphsage.SrcHost.IP, graphsage.DestHost.IP)
 
-		// // neighbour.
-		// tmpSrcNegFeature := make([][]float32, 0, defaultAggregationNumber)
-		// for i := 0; i < defaultAggregationNumber; i++ {
-		// 	start := i * defaultIPv4FeatureLength
-		// 	end := start + defaultIPv4FeatureLength
-		// 	tmpSrcNegFeature = append(tmpSrcNegFeature, graphsage.SrcNegFeature[start:end])
-		// }
-		// records.SrcNegFeature = append(records.SrcNegFeature, tmpSrcNegFeature)
+		if value, ok := bandwidths[key]; ok {
+			record := Record{}
+			record.Bandwidth = value
 
-		// tmpDestNegFeature := make([][]float32, 0, defaultAggregationNumber)
-		// for i := 0; i < defaultAggregationNumber; i++ {
-		// 	start := i * defaultIPv4FeatureLength
-		// 	end := start + defaultIPv4FeatureLength
-		// 	tmpDestNegFeature = append(tmpDestNegFeature, graphsage.DestFeature[start:end])
-		// }
-		// records.DestNegFeature = append(records.SrcNegFeature, tmpDestNegFeature)
+			// root.
+			record.SrcFeature = graphsage.SrcFeature
+			record.DestFeature = graphsage.DestFeature
 
-		// // neighbour neighbour.
-		// tmpSrcNegNegFeature := make([][][]float32, 0, defaultAggregationNumber)
-		// for i := 0; i < defaultAggregationNumber; i++ {
-		// 	tmpSrcNegFeature := make([][]float32, 0, defaultAggregationNumber)
-		// 	for j := 0; j < defaultAggregationNumber; j++ {
-		// 		start := (i*defaultAggregationNumber + j) * defaultIPv4FeatureLength
-		// 		end := start + defaultIPv4FeatureLength
-		// 		tmpSrcNegFeature = append(tmpSrcNegFeature, graphsage.SrcNegNegFeature[start:end])
-		// 	}
+			// neighbour.
+			for i := 0; i < defaultAggregationNumber; i++ {
+				start := i * defaultIPv4FeatureLength
+				end := start + defaultIPv4FeatureLength
+				record.SrcNegFeature = append(record.SrcNegFeature, graphsage.SrcNegFeature[start:end])
+			}
 
-		// 	tmpSrcNegNegFeature = append(tmpSrcNegNegFeature, tmpSrcNegFeature)
-		// }
-		// records.SrcNegNegFeature = append(records.SrcNegNegFeature, tmpSrcNegNegFeature)
+			for i := 0; i < defaultAggregationNumber; i++ {
+				start := i * defaultIPv4FeatureLength
+				end := start + defaultIPv4FeatureLength
+				record.DestNegFeature = append(record.DestNegFeature, graphsage.DestFeature[start:end])
+			}
 
-		// tmpDestNegNegFeature := make([][][]float32, 0, defaultAggregationNumber)
-		// for i := 0; i < defaultAggregationNumber; i++ {
-		// 	tmpDestNegFeature := make([][]float32, 0, defaultAggregationNumber)
-		// 	for j := 0; j < defaultAggregationNumber; j++ {
-		// 		start := (i*defaultAggregationNumber + j) * defaultIPv4FeatureLength
-		// 		end := start + defaultIPv4FeatureLength
-		// 		tmpDestNegFeature = append(tmpDestNegFeature, graphsage.DestNegNegFeature[start:end])
-		// 	}
+			// neighbour neighbour.
+			for i := 0; i < defaultAggregationNumber; i++ {
+				tmpSrcNegFeature := make([][]float32, 0, defaultAggregationNumber)
+				for j := 0; j < defaultAggregationNumber; j++ {
+					start := (i*defaultAggregationNumber + j) * defaultIPv4FeatureLength
+					end := start + defaultIPv4FeatureLength
+					tmpSrcNegFeature = append(tmpSrcNegFeature, graphsage.SrcNegNegFeature[start:end])
+				}
 
-		// 	tmpDestNegNegFeature = append(tmpDestNegNegFeature, tmpDestNegFeature)
-		// }
-		// records.DestNegNegFeature = append(records.DestNegNegFeature, tmpDestNegNegFeature)
+				record.SrcNegNegFeature = append(record.SrcNegNegFeature, tmpSrcNegFeature)
+			}
+
+			for i := 0; i < defaultAggregationNumber; i++ {
+				tmpDestNegFeature := make([][]float32, 0, defaultAggregationNumber)
+				for j := 0; j < defaultAggregationNumber; j++ {
+					start := (i*defaultAggregationNumber + j) * defaultIPv4FeatureLength
+					end := start + defaultIPv4FeatureLength
+					tmpDestNegFeature = append(tmpDestNegFeature, graphsage.DestNegNegFeature[start:end])
+				}
+
+				record.DestNegNegFeature = append(record.DestNegNegFeature, tmpDestNegFeature)
+			}
+
+			logger.Info(record)
+			records = append(records, record)
+		}
 	}
+	logger.Info(len(records))
 
 	return nil
 }
@@ -222,6 +225,6 @@ func makeKeyInTrainer(namespace, id string) string {
 }
 
 // makeBandwidthKeyInTrainer make bandwidth key in trainer.
-func makeBandwidthKeyInTrainer(srcHostID, destHostID string) string {
-	return makeKeyInTrainer(BandwidthNamespace, fmt.Sprintf("%s:%s", srcHostID, destHostID))
+func makeBandwidthKeyInTrainer(peerID, srcHostID, destHostID string) string {
+	return makeKeyInTrainer(BandwidthNamespace, fmt.Sprintf("%s:%s:%s", peerID, srcHostID, destHostID))
 }
