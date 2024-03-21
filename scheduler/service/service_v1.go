@@ -1626,6 +1626,7 @@ func (v *V1) createDownloadRecord(peer *resource.Peer, parents []*resource.Peer,
 		}
 	}
 
+	logger.Info("Create download record")
 	if err := v.storage.CreateDownload(download); err != nil {
 		peer.Log.Error(err)
 	}
