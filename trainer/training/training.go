@@ -140,6 +140,10 @@ func (t *training) preprocess(ip, hostname string) error {
 		}
 	}
 
+	for k, v := range bandwidths {
+		logger.Infof("%s:%f", k, v)
+	}
+
 	// Preprocess graphsage training data.
 	logger.Info("loading graphsage.csv")
 	graphsageFile, err := t.storage.OpenGraphsage(hostID)
@@ -158,9 +162,9 @@ func (t *training) preprocess(ip, hostname string) error {
 		}
 	}()
 	for graphsage := range gc {
-		logger.Info(graphsage)
-		key := makeBandwidthKeyInTrainer(graphsage.ID, graphsage.SrcHost.IP, graphsage.DestHost.IP)
 
+		key := makeBandwidthKeyInTrainer(graphsage.ID, graphsage.SrcHost.IP, graphsage.DestHost.IP)
+		logger.Info(key)
 		if value, ok := bandwidths[key]; ok {
 			record := Record{}
 			record.Bandwidth = value
@@ -175,12 +179,14 @@ func (t *training) preprocess(ip, hostname string) error {
 				end := start + defaultIPv4FeatureLength
 				record.SrcNegFeature = append(record.SrcNegFeature, graphsage.SrcNegFeature[start:end])
 			}
+			logger.Info(record.SrcNegFeature)
 
 			for i := 0; i < defaultAggregationNumber; i++ {
 				start := i * defaultIPv4FeatureLength
 				end := start + defaultIPv4FeatureLength
 				record.DestNegFeature = append(record.DestNegFeature, graphsage.DestFeature[start:end])
 			}
+			logger.Info(record.DestFeature)
 
 			// neighbour neighbour.
 			for i := 0; i < defaultAggregationNumber; i++ {
@@ -193,6 +199,7 @@ func (t *training) preprocess(ip, hostname string) error {
 
 				record.SrcNegNegFeature = append(record.SrcNegNegFeature, tmpSrcNegFeature)
 			}
+			logger.Info(record.SrcNegNegFeature)
 
 			for i := 0; i < defaultAggregationNumber; i++ {
 				tmpDestNegFeature := make([][]float32, 0, defaultAggregationNumber)
@@ -204,12 +211,12 @@ func (t *training) preprocess(ip, hostname string) error {
 
 				record.DestNegNegFeature = append(record.DestNegNegFeature, tmpDestNegFeature)
 			}
+			logger.Info(record.DestNegNegFeature)
 
 			logger.Info(record)
 			records = append(records, record)
 		}
 	}
-	logger.Info(len(records))
 
 	return nil
 }
