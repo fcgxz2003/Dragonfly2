@@ -172,6 +172,10 @@ func (t *training) preprocess(ip, hostname string) error {
 			// root.
 			record.SrcFeature = graphsage.SrcFeature
 			record.DestFeature = graphsage.DestFeature
+			logger.Info("source")
+			logger.Info(record.SrcFeature)
+			logger.Info("destination")
+			logger.Info(record.DestFeature)
 
 			// neighbour.
 			for i := 0; i < defaultAggregationNumber; i++ {
@@ -179,6 +183,7 @@ func (t *training) preprocess(ip, hostname string) error {
 				end := start + defaultIPv4FeatureLength
 				record.SrcNegFeature = append(record.SrcNegFeature, graphsage.SrcNegFeature[start:end])
 			}
+			logger.Info("source neighbour")
 			logger.Info(record.SrcNegFeature)
 
 			for i := 0; i < defaultAggregationNumber; i++ {
@@ -186,6 +191,7 @@ func (t *training) preprocess(ip, hostname string) error {
 				end := start + defaultIPv4FeatureLength
 				record.DestNegFeature = append(record.DestNegFeature, graphsage.DestFeature[start:end])
 			}
+			logger.Info("destination neighbour")
 			logger.Info(record.DestFeature)
 
 			// neighbour neighbour.
@@ -199,6 +205,7 @@ func (t *training) preprocess(ip, hostname string) error {
 
 				record.SrcNegNegFeature = append(record.SrcNegNegFeature, tmpSrcNegFeature)
 			}
+			logger.Info("source neighbour neighbour")
 			logger.Info(record.SrcNegNegFeature)
 
 			for i := 0; i < defaultAggregationNumber; i++ {
@@ -211,6 +218,7 @@ func (t *training) preprocess(ip, hostname string) error {
 
 				record.DestNegNegFeature = append(record.DestNegNegFeature, tmpDestNegFeature)
 			}
+			logger.Info("destination neighbour neighbour")
 			logger.Info(record.DestNegNegFeature)
 
 			logger.Info(record)
