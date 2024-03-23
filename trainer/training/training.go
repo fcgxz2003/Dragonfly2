@@ -189,10 +189,10 @@ func (t *training) preprocess(ip, hostname string) error {
 			for i := 0; i < defaultAggregationNumber; i++ {
 				start := i * defaultIPv4FeatureLength
 				end := start + defaultIPv4FeatureLength
-				record.DestNegFeature = append(record.DestNegFeature, graphsage.DestFeature[start:end])
+				record.DestNegFeature = append(record.DestNegFeature, graphsage.DestNegFeature[start:end])
 			}
 			logger.Info("destination neighbour")
-			logger.Info(record.DestFeature)
+			logger.Info(record.DestNegFeature)
 
 			// neighbour neighbour.
 			for i := 0; i < defaultAggregationNumber; i++ {
