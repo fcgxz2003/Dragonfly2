@@ -63,12 +63,14 @@ seedPeer:
     enable: true
   config:
     verbose: true
+    storage:
+      writeBufferSize: 1Mi
     download:
       prefetch: true
-    networkTopology:
+      networkTopology:
       enable: true
       probe:
-        interval: 10s  
+        interval: 10s 
 
 dfdaemon:
   image: dragonflyoss/dfdaemon
@@ -98,6 +100,8 @@ dfdaemon:
     pprofPort: 9999
     download:
       prefetch: true
+    storage:
+      writeBufferSize: 1Mi
     scheduler:
       disableAutoBackSource: true
     proxy:
@@ -117,7 +121,7 @@ dfdaemon:
     networkTopology:
       enable: true
       probe:
-        interval: 10s    
+        interval: 10s     
 
 manager:
   image: dragonflyoss/manager
