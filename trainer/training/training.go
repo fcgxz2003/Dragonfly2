@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	tf "github.com/galeone/tensorflow/tensorflow/go"
-	tg "github.com/galeone/tfgo"
 	"github.com/gocarina/gocsv"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -86,14 +85,16 @@ func (t *training) Train(ctx context.Context, ip, hostname string) error {
 	// Write record to buffer.
 	t.buffer = append(t.buffer, records...)
 	for {
-		if len(t.buffer) >= defaultBatchSize {
-			if err := t.train(t.buffer[:defaultBatchSize]); err != nil {
-				logger.Info(err)
-				continue
-			}
-
-			t.buffer = t.buffer[defaultBatchSize:]
+		if len(t.buffer) < defaultBatchSize {
+			break
 		}
+
+		if err := t.train(t.buffer[:defaultBatchSize]); err != nil {
+			logger.Info(err)
+			continue
+		}
+
+		t.buffer = t.buffer[defaultBatchSize:]
 	}
 
 	var hostID = idgen.HostIDV2(ip, hostname)
@@ -229,32 +230,32 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 }
 
 func (t *training) train(records []Record) error {
-	model := tg.LoadModel("model1", []string{"serve"}, nil)
+	gm, _ := tf.LoadSavedModel("base_model", []string{"serve"}, nil)
 
-	var (
-		src       = make([][]float32, 0, defaultBatchSize)
-		srcNeg    = make([][][]float32, 0, defaultBatchSize)
-		srcNegNeg = make([][][][]float32, 0, defaultBatchSize)
-		dst       = make([][]float32, 0, defaultBatchSize)
-		dstNeg    = make([][][]float32, 0, defaultBatchSize)
-		dstNegNeg = make([][][][]float32, 0, defaultBatchSize)
-		labels    = make([]float32, 0, defaultBatchSize)
-	)
+	// var (
+	// 	src       = make([][]float32, 0, defaultBatchSize)
+	// 	srcNeg    = make([][][]float32, 0, defaultBatchSize)
+	// 	srcNegNeg = make([][][][]float32, 0, defaultBatchSize)
+	// 	dst       = make([][]float32, 0, defaultBatchSize)
+	// 	dstNeg    = make([][][]float32, 0, defaultBatchSize)
+	// 	dstNegNeg = make([][][][]float32, 0, defaultBatchSize)
+	// 	labels    = make([]float32, 0, defaultBatchSize)
+	// )
 
-	results := model.Exec([]tf.Output{
-		model.Op("StatefulPartitionedCall_1", 0),
-	}, map[tf.Output]*tf.Tensor{
-		model.Op("train_src", 0):         src,
-		model.Op("train_src_neg", 0):     srcNeg,
-		model.Op("train_src_neg_neg", 0): srcNegNeg,
-		model.Op("train_dst", 0):         dst,
-		model.Op("train_dst_neg", 0):     dstNeg,
-		model.Op("train_dst_neg_neg", 0): dstNegNeg,
-		model.Op("train_labels", 0):      labels,
-	})
+	// results := model.Exec([]tf.Output{
+	// 	model.Op("StatefulPartitionedCall_1", 0),
+	// }, map[tf.Output]*tf.Tensor{
+	// 	model.Op("train_src", 0):         src,
+	// 	model.Op("train_src_neg", 0):     srcNeg,
+	// 	model.Op("train_src_neg_neg", 0): srcNegNeg,
+	// 	model.Op("train_dst", 0):         dst,
+	// 	model.Op("train_dst_neg", 0):     dstNeg,
+	// 	model.Op("train_dst_neg_neg", 0): dstNegNeg,
+	// 	model.Op("train_labels", 0):      labels,
+	// })
 
-	predictions := results[0]
-	fmt.Println(predictions.Value())
+	// predictions := results[0]
+	// fmt.Println(predictions.Value())
 
 	return nil
 }
