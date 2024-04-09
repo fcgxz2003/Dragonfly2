@@ -18,6 +18,7 @@ package training
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	tf "github.com/galeone/tensorflow/tensorflow/go"
@@ -41,7 +42,9 @@ const (
 
 	defaultIPv4FeatureLength = 32
 
-	defaultBatchSize = 64
+	defaultBatchSize = 32
+
+	defaultEpoch = 10
 )
 
 // Training defines the interface to train GNN and MLP model.
@@ -61,7 +64,14 @@ type training struct {
 	// Manager service clent.
 	managerClient managerclient.V2
 
+	// Record Buffer.
 	buffer []Record
+
+	// Training epoch.
+	epoch int
+
+	// Loss of each epoch.
+	losses []float32
 }
 
 // New returns a new Training.
@@ -232,30 +242,102 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 func (t *training) train(records []Record) error {
 	gm, _ := tf.LoadSavedModel("base_model", []string{"serve"}, nil)
 
-	// var (
-	// 	src       = make([][]float32, 0, defaultBatchSize)
-	// 	srcNeg    = make([][][]float32, 0, defaultBatchSize)
-	// 	srcNegNeg = make([][][][]float32, 0, defaultBatchSize)
-	// 	dst       = make([][]float32, 0, defaultBatchSize)
-	// 	dstNeg    = make([][][]float32, 0, defaultBatchSize)
-	// 	dstNegNeg = make([][][][]float32, 0, defaultBatchSize)
-	// 	labels    = make([]float32, 0, defaultBatchSize)
-	// )
+	// Reach the training rounds, save and upload the model.
+	if t.epoch >= defaultEpoch {
+		// TODO
+		logger.Info("save model")
+	}
 
-	// results := model.Exec([]tf.Output{
-	// 	model.Op("StatefulPartitionedCall_1", 0),
-	// }, map[tf.Output]*tf.Tensor{
-	// 	model.Op("train_src", 0):         src,
-	// 	model.Op("train_src_neg", 0):     srcNeg,
-	// 	model.Op("train_src_neg_neg", 0): srcNegNeg,
-	// 	model.Op("train_dst", 0):         dst,
-	// 	model.Op("train_dst_neg", 0):     dstNeg,
-	// 	model.Op("train_dst_neg_neg", 0): dstNegNeg,
-	// 	model.Op("train_labels", 0):      labels,
-	// })
+	var (
+		srcRawData       = make([][]float32, 0, defaultBatchSize)
+		srcNegRawData    = make([][][]float32, 0, defaultBatchSize)
+		srcNegNegRawData = make([][][][]float32, 0, defaultBatchSize)
+		dstRawData       = make([][]float32, 0, defaultBatchSize)
+		dstNegRawData    = make([][][]float32, 0, defaultBatchSize)
+		dstNegNegRawData = make([][][][]float32, 0, defaultBatchSize)
+		labelsRawData    = make([]float32, 0, defaultBatchSize)
+	)
 
-	// predictions := results[0]
-	// fmt.Println(predictions.Value())
+	for _, record := range records {
+		srcRawData = append(srcRawData, record.SrcFeature)
+		srcNegRawData = append(srcNegRawData, record.SrcNegFeature)
+		srcNegNegRawData = append(srcNegNegRawData, record.SrcNegNegFeature)
+		dstRawData = append(dstRawData, record.DestFeature)
+		dstNegRawData = append(dstNegRawData, record.DestNegFeature)
+		dstNegNegRawData = append(dstNegNegRawData, record.DestNegNegFeature)
+		labelsRawData = append(labelsRawData, record.Bandwidth)
+	}
 
+	// Convert raw data to tensor.
+	src, err := tf.NewTensor(srcRawData)
+	if err != nil {
+		logger.Error(err)
+		return err
+	}
+
+	srcNeg, err := tf.NewTensor(srcNegRawData)
+	if err != nil {
+		logger.Error(err)
+		return err
+	}
+
+	srcNegNeg, err := tf.NewTensor(srcNegNegRawData)
+	if err != nil {
+		logger.Error(err)
+		return err
+	}
+
+	dst, err := tf.NewTensor(dstRawData)
+	if err != nil {
+		logger.Error(err)
+		return err
+	}
+
+	dstNeg, err := tf.NewTensor(dstNegRawData)
+	if err != nil {
+		logger.Error(err)
+		return err
+	}
+
+	dstNegNeg, err := tf.NewTensor(dstNegNegRawData)
+	if err != nil {
+		logger.Error(err)
+		return err
+	}
+
+	labels, err := tf.NewTensor(labelsRawData)
+	if err != nil {
+		logger.Error(err)
+		return err
+	}
+
+	// Start training.
+	result, err := gm.Session.Run(
+		map[tf.Output]*tf.Tensor{
+			gm.Graph.Operation("train_src").Output(0):         src,
+			gm.Graph.Operation("train_src_neg").Output(0):     srcNeg,
+			gm.Graph.Operation("train_src_neg_neg").Output(0): srcNegNeg,
+			gm.Graph.Operation("train_dst").Output(0):         dst,
+			gm.Graph.Operation("train_dst_neg").Output(0):     dstNeg,
+			gm.Graph.Operation("train_dst_neg_neg").Output(0): dstNegNeg,
+			gm.Graph.Operation("train_labels").Output(0):      labels,
+		},
+		[]tf.Output{
+			gm.Graph.Operation("StatefulPartitionedCall_1").Output(0),
+		},
+		nil,
+	)
+	if err != nil {
+		logger.Error(err)
+		return err
+	}
+
+	loss, ok := result[0].Value().(float32)
+	if !ok {
+		logger.Info("error output")
+		return errors.New("error output")
+	}
+
+	t.losses = append(t.losses, loss)
 	return nil
 }
