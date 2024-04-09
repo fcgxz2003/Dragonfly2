@@ -20,12 +20,14 @@ import (
 	"context"
 	"fmt"
 
+	tf "github.com/galeone/tensorflow/tensorflow/go"
 	"github.com/gocarina/gocsv"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	logger "d7y.io/dragonfly/v2/internal/dflog"
 	"d7y.io/dragonfly/v2/pkg/idgen"
+	pkgredis "d7y.io/dragonfly/v2/pkg/redis"
 	managerclient "d7y.io/dragonfly/v2/pkg/rpc/manager/client"
 	schedulerstorage "d7y.io/dragonfly/v2/scheduler/storage"
 	"d7y.io/dragonfly/v2/trainer/config"
@@ -39,11 +41,7 @@ const (
 
 	defaultIPv4FeatureLength = 32
 
-	// BandwidthNamespace prefix of bandwidth namespace cache key.
-	BandwidthNamespace = "bandwidth"
-
-	// TrainerName is name of trainer.
-	TrainerName = "trainer"
+	defaultBatchSize = 64
 )
 
 // Training defines the interface to train GNN and MLP model.
@@ -62,6 +60,8 @@ type training struct {
 
 	// Manager service clent.
 	managerClient managerclient.V2
+
+	buffer []Record
 }
 
 // New returns a new Training.
@@ -70,17 +70,33 @@ func New(cfg *config.Config, managerClient managerclient.V2, storage storage.Sto
 		config:        cfg,
 		storage:       storage,
 		managerClient: managerClient,
+		buffer:        make([]Record, 0),
 	}
 }
 
 // Train begins training GNN and MLP model.
 func (t *training) Train(ctx context.Context, ip, hostname string) error {
-	if err := t.preprocess(ip, hostname); err != nil {
+	records, err := t.preprocess(ip, hostname)
+	if err != nil {
 		logger.Error(err)
 		return err
 	}
 
+	// Write record to buffer.
+	t.buffer = append(t.buffer, records...)
+	for {
+		if len(t.buffer) >= defaultBatchSize {
+			if err := t.train(t.buffer[:defaultBatchSize]); err != nil {
+				logger.Info(err)
+				continue
+			}
+
+			t.buffer = t.buffer[defaultBatchSize:]
+		}
+	}
+
 	var hostID = idgen.HostIDV2(ip, hostname)
+
 	// Clean up download data.
 	if err := t.storage.ClearDownload(hostID); err != nil {
 		logger.Error(err)
@@ -96,7 +112,7 @@ func (t *training) Train(ctx context.Context, ip, hostname string) error {
 	return nil
 }
 
-func (t *training) preprocess(ip, hostname string) error {
+func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 	var hostID = idgen.HostIDV2(ip, hostname)
 	// Preprocess download training data.
 	logger.Info("loading download.csv")
@@ -104,7 +120,7 @@ func (t *training) preprocess(ip, hostname string) error {
 	if err != nil {
 		msg := fmt.Sprintf("open download failed: %s", err.Error())
 		logger.Error(msg)
-		return status.Error(codes.Internal, msg)
+		return nil, status.Error(codes.Internal, msg)
 	}
 	defer downloadFile.Close()
 
@@ -128,7 +144,7 @@ func (t *training) preprocess(ip, hostname string) error {
 				}
 
 				// updata maxBandwidth globally.
-				key := makeBandwidthKeyInTrainer(download.ID, download.Host.IP, parent.Host.IP)
+				key := pkgredis.MakeBandwidthKeyInTrainer(download.ID, download.Host.IP, parent.Host.IP)
 				if value, ok := bandwidths[key]; ok {
 					if localMaxBandwidth > value {
 						bandwidths[key] = localMaxBandwidth
@@ -140,17 +156,13 @@ func (t *training) preprocess(ip, hostname string) error {
 		}
 	}
 
-	for k, v := range bandwidths {
-		logger.Infof("%s:%f", k, v)
-	}
-
 	// Preprocess graphsage training data.
 	logger.Info("loading graphsage.csv")
 	graphsageFile, err := t.storage.OpenGraphsage(hostID)
 	if err != nil {
 		msg := fmt.Sprintf("open graphsage records failed: %s", err.Error())
 		logger.Error(msg)
-		return status.Error(codes.Internal, msg)
+		return nil, status.Error(codes.Internal, msg)
 	}
 	defer graphsageFile.Close()
 
@@ -162,9 +174,8 @@ func (t *training) preprocess(ip, hostname string) error {
 		}
 	}()
 	for graphsage := range gc {
-
-		key := makeBandwidthKeyInTrainer(graphsage.ID, graphsage.SrcHost.IP, graphsage.DestHost.IP)
-		logger.Info(key)
+		logger.Info(graphsage)
+		key := pkgredis.MakeBandwidthKeyInTrainer(graphsage.ID, graphsage.SrcHost.IP, graphsage.DestHost.IP)
 		if value, ok := bandwidths[key]; ok {
 			record := Record{}
 			record.Bandwidth = value
@@ -172,10 +183,6 @@ func (t *training) preprocess(ip, hostname string) error {
 			// root.
 			record.SrcFeature = graphsage.SrcFeature
 			record.DestFeature = graphsage.DestFeature
-			logger.Info("source")
-			logger.Info(record.SrcFeature)
-			logger.Info("destination")
-			logger.Info(record.DestFeature)
 
 			// neighbour.
 			for i := 0; i < defaultAggregationNumber; i++ {
@@ -183,16 +190,12 @@ func (t *training) preprocess(ip, hostname string) error {
 				end := start + defaultIPv4FeatureLength
 				record.SrcNegFeature = append(record.SrcNegFeature, graphsage.SrcNegFeature[start:end])
 			}
-			logger.Info("source neighbour")
-			logger.Info(record.SrcNegFeature)
 
 			for i := 0; i < defaultAggregationNumber; i++ {
 				start := i * defaultIPv4FeatureLength
 				end := start + defaultIPv4FeatureLength
 				record.DestNegFeature = append(record.DestNegFeature, graphsage.DestNegFeature[start:end])
 			}
-			logger.Info("destination neighbour")
-			logger.Info(record.DestNegFeature)
 
 			// neighbour neighbour.
 			for i := 0; i < defaultAggregationNumber; i++ {
@@ -205,8 +208,6 @@ func (t *training) preprocess(ip, hostname string) error {
 
 				record.SrcNegNegFeature = append(record.SrcNegNegFeature, tmpSrcNegFeature)
 			}
-			logger.Info("source neighbour neighbour")
-			logger.Info(record.SrcNegNegFeature)
 
 			for i := 0; i < defaultAggregationNumber; i++ {
 				tmpDestNegFeature := make([][]float32, 0, defaultAggregationNumber)
@@ -218,28 +219,15 @@ func (t *training) preprocess(ip, hostname string) error {
 
 				record.DestNegNegFeature = append(record.DestNegNegFeature, tmpDestNegFeature)
 			}
-			logger.Info("destination neighbour neighbour")
-			logger.Info(record.DestNegNegFeature)
 
-			logger.Info(record)
 			records = append(records, record)
 		}
 	}
 
+	return records, nil
+}
+
+func (t *training) train(records []Record) error {
+	gm, _ := tf.LoadSavedModel("base_model", []string{"serve"}, nil)
 	return nil
-}
-
-// makeNamespaceKeyInTrainer make namespace key in trainer.
-func makeNamespaceKeyInTrainer(namespace string) string {
-	return fmt.Sprintf("%s:%s", TrainerName, namespace)
-}
-
-// makeKeyInTrainer make key in trainer.
-func makeKeyInTrainer(namespace, id string) string {
-	return fmt.Sprintf("%s:%s", makeNamespaceKeyInTrainer(namespace), id)
-}
-
-// makeBandwidthKeyInTrainer make bandwidth key in trainer.
-func makeBandwidthKeyInTrainer(peerID, srcHostID, destHostID string) string {
-	return makeKeyInTrainer(BandwidthNamespace, fmt.Sprintf("%s:%s:%s", peerID, srcHostID, destHostID))
 }

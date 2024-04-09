@@ -446,6 +446,8 @@ github.com/gabriel-vasile/mimetype v1.4.3 h1:in2uUcidCuFcDKtdcBxlR0rJ1+fsokWf+uq
 github.com/gabriel-vasile/mimetype v1.4.3/go.mod h1:d8uq/6HKRL6CGdk+aubisF/M5GcPfT7nKyLpA0lbSSk=
 github.com/gaius-qi/ping v1.0.0 h1:HBh5OX8+g6nMGudQkZFY5lFcRbjr2wDPFSM/SyqGY30=
 github.com/gaius-qi/ping v1.0.0/go.mod h1:hbxvEGZwLyWUm4YIOpcFOvRHdWKJV2duo6iBrOMQSDU=
+github.com/galeone/tensorflow/tensorflow/go v0.0.0-20240119075110-6ad3cf65adfe h1:7yELf1NFEwECpXMGowkoftcInMlVtLTCdwWLmxKgzNM=
+github.com/galeone/tensorflow/tensorflow/go v0.0.0-20240119075110-6ad3cf65adfe/go.mod h1:TelZuq26kz2jysARBwOrTv16629hyUsHmIoj54QqyFo=
 github.com/gammazero/deque v0.2.1 h1:qSdsbG6pgp6nL7A0+K/B7s12mcCY/5l5SIUpMOl+dC0=
 github.com/gammazero/deque v0.2.1/go.mod h1:LFroj8x4cMYCukHJDbxFCkT+r9AndaJnFMuZDV34tuU=
 github.com/garyburd/redigo v0.0.0-20150301180006-535138d7bcd7/go.mod h1:NR3MbYisc3/PwhQ00EMzDiPmrwpPxAn5GI05/YaO1SY=
