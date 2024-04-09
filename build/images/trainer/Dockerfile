@@ -35,7 +35,8 @@ RUN echo "hosts: files dns" > /etc/nsswitch.conf
 RUN apk --no-cache add curl && \
     curl -o libtensorflow.tar.gz https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-gpu-linux-x86_64-2.12.0.tar.gz && \
     tar zxf libtensorflow.tar.gz -C /usr/local && \ 
-    rm libtensorflow.tar.gz
+    rm libtensorflow.tar.gz && \
+    ldconfig /usr/local/lib
     
 COPY --from=builder /opt/dragonfly/bin/trainer /opt/dragonfly/bin/trainer
 COPY --from=health /bin/grpc_health_probe /bin/grpc_health_probe
