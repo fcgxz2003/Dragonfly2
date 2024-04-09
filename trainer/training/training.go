@@ -42,9 +42,9 @@ const (
 
 	defaultIPv4FeatureLength = 32
 
-	defaultBatchSize = 32
+	defaultBatchSize = 5
 
-	defaultEpoch = 10
+	defaultEpoch = 1
 )
 
 // Training defines the interface to train GNN and MLP model.
@@ -168,6 +168,10 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 		}
 	}
 
+	for k, v := range bandwidths {
+		logger.Info("%s:%s", k, v)
+	}
+
 	// Preprocess graphsage training data.
 	logger.Info("loading graphsage.csv")
 	graphsageFile, err := t.storage.OpenGraphsage(hostID)
@@ -236,6 +240,7 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 		}
 	}
 
+	logger.Info(records)
 	return records, nil
 }
 
@@ -246,6 +251,8 @@ func (t *training) train(records []Record) error {
 	if t.epoch >= defaultEpoch {
 		// TODO
 		logger.Info("save model")
+		t.epoch = 0
+		t.losses = t.losses[:0]
 	}
 
 	var (
@@ -339,5 +346,6 @@ func (t *training) train(records []Record) error {
 	}
 
 	t.losses = append(t.losses, loss)
+	t.epoch++
 	return nil
 }
