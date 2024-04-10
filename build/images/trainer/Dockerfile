@@ -18,6 +18,8 @@ RUN apk --no-cache add curl && \
     rm libtensorflow.tar.gz && \
     ldconfig /usr/local/lib
 
+RUN apt-get -y install --no-install-recommends libprotobuf-dev protobuf-compiler
+
 RUN make build-trainer && make install-trainer
 
 FROM ${BASE_IMAGE} as health
