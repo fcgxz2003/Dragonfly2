@@ -26,7 +26,6 @@ import (
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -49,7 +48,6 @@ func GetV1(ctx context.Context, target string, opts ...grpc.DialOption) (V1, err
 		target,
 		append([]grpc.DialOption{
 			grpc.WithIdleTimeout(0),
-			grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
 			grpc.WithUnaryInterceptor(grpc_middleware.ChainUnaryClient(
 				rpc.ConvertErrorUnaryClientInterceptor,
 				grpc_prometheus.UnaryClientInterceptor,
@@ -107,6 +105,9 @@ type V1 interface {
 
 	// LeaveHost leaves the host from the scheduler.
 	LeaveHost(context.Context, ...grpc.CallOption) error
+
+	// PeerExchange exchange peer metadata between daemons
+	PeerExchange(ctx context.Context, opts ...grpc.CallOption) (dfdaemonv1.Daemon_PeerExchangeClient, error)
 
 	// Check daemon health.
 	CheckHealth(context.Context, ...grpc.CallOption) error
@@ -191,4 +192,14 @@ func (v *v1) CheckHealth(ctx context.Context, opts ...grpc.CallOption) error {
 
 	_, err := v.DaemonClient.CheckHealth(ctx, new(emptypb.Empty), opts...)
 	return err
+}
+
+// PeerExchange exchange peer metadata between daemons
+func (v *v1) PeerExchange(ctx context.Context, opts ...grpc.CallOption) (dfdaemonv1.Daemon_PeerExchangeClient, error) {
+	stream, err := v.DaemonClient.PeerExchange(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return stream, nil
 }

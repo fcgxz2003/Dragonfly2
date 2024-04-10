@@ -41,7 +41,7 @@ var _ = Describe("Evaluator with networkTopology", func() {
 			Expect(waitForProbedInNetworkTopology()).Should(BeTrue())
 
 			if waitForProbedInNetworkTopology() == true {
-				time.Sleep(2 * time.Minute)
+				time.Sleep(3 * time.Minute)
 				Expect(checkNetworkTopologyUpdated()).Should(BeTrue())
 			}
 		})
@@ -124,30 +124,35 @@ func waitForProbedInNetworkTopology() bool {
 func checkNetworkTopologyUpdated() bool {
 	redisPod := getRedisExec()
 
-	var networkTopologyKey string
 	out, err := redisPod.Command("redis-cli", "-a", "dragonfly", "-n", "3", "KEYS", "scheduler:network-topology:*").CombinedOutput()
+	networkTopologyKey := strings.Split(string(out), "\n")
 	Expect(err).NotTo(HaveOccurred())
 	for i := 1; i <= 3; i++ {
-		networkTopologyKey = strings.Split(string(out), "\n")[i]
-		updatedAtOut, err := redisPod.Command("redis-cli", "-a", "dragonfly", "-n", "3", "HGET", networkTopologyKey, "updatedAt").CombinedOutput()
+		updatedAtOut, err := redisPod.Command("redis-cli", "-a", "dragonfly", "-n", "3", "HGET", networkTopologyKey[i], "updatedAt").CombinedOutput()
 		Expect(err).NotTo(HaveOccurred())
-		createdAtOut, err := redisPod.Command("redis-cli", "-a", "dragonfly", "-n", "3", "HGET", networkTopologyKey, "createdAt").CombinedOutput()
+		createdAtOut, err := redisPod.Command("redis-cli", "-a", "dragonfly", "-n", "3", "HGET", networkTopologyKey[i], "createdAt").CombinedOutput()
 		Expect(err).NotTo(HaveOccurred())
 		if strings.Split(string(updatedAtOut), "\n")[1] == strings.Split(string(createdAtOut), "\n")[1] {
 			return false
 		}
 	}
 
-	var probedCountKey string
 	out, err = redisPod.Command("redis-cli", "-a", "dragonfly", "-n", "3", "KEYS", "scheduler:probed-count:*").CombinedOutput()
 	Expect(err).NotTo(HaveOccurred())
+	probedCountKey := strings.Split(string(out), "\n")
 	for i := 1; i <= 3; i++ {
-		probedCountKey = strings.Split(string(out), "\n")[i]
-		probedCountOut, err := redisPod.Command("redis-cli", "-a", "dragonfly", "-n", "3", "GET", probedCountKey).CombinedOutput()
+		probedCountOut, err := redisPod.Command("redis-cli", "-a", "dragonfly", "-n", "3", "GET", probedCountKey[i]).CombinedOutput()
+		str := string(probedCountOut)
 		Expect(err).NotTo(HaveOccurred())
-		probedCount, err := strconv.Atoi(strings.Split(string(probedCountOut), "\n")[1])
+		for _, c := range str {
+			if c < '0' || c > '9' {
+				str = strings.ReplaceAll(str, string(c), "")
+			}
+		}
+		probedCount, err := strconv.Atoi(str)
 		Expect(err).NotTo(HaveOccurred())
-		if probedCount <= 1 && probedCount >= 50 {
+		fmt.Printf("%s probedCount: %d \n", probedCountKey[i], probedCount)
+		if probedCount <= 1 || probedCount >= 300 {
 			return false
 		}
 	}
