@@ -17,15 +17,21 @@
 package training
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 
 	tf "github.com/galeone/tensorflow/tensorflow/go"
 	"github.com/gocarina/gocsv"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	managerv1 "d7y.io/api/v2/pkg/apis/manager/v1"
 	logger "d7y.io/dragonfly/v2/internal/dflog"
 	"d7y.io/dragonfly/v2/pkg/idgen"
 	pkgredis "d7y.io/dragonfly/v2/pkg/redis"
@@ -62,7 +68,7 @@ type training struct {
 	storage storage.Storage
 
 	// Manager service clent.
-	managerClient managerclient.V2
+	managerClient managerclient.V1
 
 	// Record Buffer.
 	buffer []Record
@@ -75,7 +81,7 @@ type training struct {
 }
 
 // New returns a new Training.
-func New(cfg *config.Config, managerClient managerclient.V2, storage storage.Storage) Training {
+func New(cfg *config.Config, managerClient managerclient.V1, storage storage.Storage) Training {
 	return &training{
 		config:        cfg,
 		storage:       storage,
@@ -99,7 +105,7 @@ func (t *training) Train(ctx context.Context, ip, hostname string) error {
 			break
 		}
 
-		if err := t.train(t.buffer[:defaultBatchSize]); err != nil {
+		if err := t.train(t.buffer[:defaultBatchSize], ip, hostname); err != nil {
 			logger.Info(err)
 			continue
 		}
@@ -244,16 +250,8 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 	return records, nil
 }
 
-func (t *training) train(records []Record) error {
+func (t *training) train(records []Record, ip, hostname string) error {
 	gm, _ := tf.LoadSavedModel("base_model", []string{"serve"}, nil)
-
-	// Reach the training rounds, save and upload the model.
-	if t.epoch >= defaultEpoch {
-		// TODO
-		logger.Info("save model")
-		t.epoch = 0
-		t.losses = t.losses[:0]
-	}
 
 	var (
 		srcRawData       = make([][]float32, 0, defaultBatchSize)
@@ -347,5 +345,122 @@ func (t *training) train(records []Record) error {
 
 	t.losses = append(t.losses, loss)
 	t.epoch++
+
+	// Reach the training rounds, save and upload the model.
+	if t.epoch >= defaultEpoch {
+		t.epoch = 0
+		t.losses = t.losses[:0]
+		if err := t.saveModel(gm); err != nil {
+			logger.Info(err)
+			return err
+		}
+
+		// Compress trained model.
+		data, err := compress("model")
+		if err != nil {
+			logger.Info(err)
+			return err
+		}
+
+		// Upload trained model to manager.
+		if err := t.managerClient.CreateModel(context.Background(), &managerv1.CreateModelRequest{
+			Hostname: hostname,
+			Ip:       ip,
+			Request: &managerv1.CreateModelRequest_CreateGnnRequest{
+				CreateGnnRequest: &managerv1.CreateGNNRequest{
+					Data:      data,
+					Recall:    0,
+					Precision: 0,
+					F1Score:   0,
+				},
+			},
+		}); err != nil {
+			logger.Error("upload GNN model to manager error: %v", err.Error())
+			return err
+		}
+
+	}
+
 	return nil
+}
+
+// Save tensorflow model.
+func (t *training) saveModel(gm *tf.SavedModel) error {
+	savedModel, err := os.ReadFile("model/base_model/saved_model.pb")
+	if err != nil {
+		return err
+	}
+
+	os.RemoveAll("model/base_model")
+	os.MkdirAll("model/base_model/variables", os.ModePerm)
+	if err := os.WriteFile("model/base_model/saved_model.pb", savedModel, os.ModePerm); err != nil {
+		return err
+	}
+
+	fileName, err := tf.NewTensor("model/base_model/variables/variables")
+	if err != nil {
+		return err
+	}
+
+	_, err = gm.Session.Run(
+		map[tf.Output]*tf.Tensor{
+			gm.Graph.Operation("saver_filename").Output(0): fileName,
+		},
+		[]tf.Output{
+			gm.Graph.Operation("StatefulPartitionedCall_2").Output(0),
+		},
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Compress trained model to byte for uploading.
+func compress(path string) ([]byte, error) {
+	zipBuffer := new(bytes.Buffer)
+	zipWriter := zip.NewWriter(zipBuffer)
+	defer zipWriter.Close()
+
+	// Iterate through all the files and subdirectories in the directory and add them to the zip compressor.
+	if err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		header, err := zip.FileInfoHeader(info)
+		if err != nil {
+			return err
+		}
+
+		// Set the zip file header name.
+		header.Name = path
+
+		// If the current file is a directory, add the zip file header directly.
+		if info.IsDir() {
+			_, err = zipWriter.CreateHeader(header)
+			return err
+		}
+
+		// If the current file is a normal file, open it and add its contents to the zip compressor.
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		entry, err := zipWriter.CreateHeader(header)
+		if err != nil {
+			return err
+		}
+
+		_, err = io.Copy(entry, file)
+		return err
+	}); err != nil {
+		return nil, err
+	}
+
+	return zipBuffer.Bytes(), nil
 }
