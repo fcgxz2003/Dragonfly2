@@ -375,7 +375,7 @@ func (t *training) train(records []Record, ip, hostname string) error {
 				},
 			},
 		}); err != nil {
-			logger.Error("upload GNN model to manager error: %v", err.Error())
+			logger.Error("upload model to manager error: %v", err.Error())
 			return err
 		}
 
