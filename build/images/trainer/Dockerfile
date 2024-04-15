@@ -14,8 +14,7 @@ RUN apt-get update \
 RUN apt-get install -y curl \
     && curl -o libtensorflow.tar.gz https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-linux-x86_64-2.15.0.tar.gz \
     && tar -C /usr/local -xzf libtensorflow.tar.gz  \ 
-    && rm libtensorflow.tar.gz \
-    && ldconfig /usr/local/lib
+    && rm libtensorflow.tar.gz
     
 COPY . /go/src/d7y.io/dragonfly/v2
 

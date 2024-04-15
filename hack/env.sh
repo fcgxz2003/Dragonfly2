@@ -8,9 +8,6 @@ export GO_SOURCE_EXCLUDES=( \
     "test" \
 )
 
-export LIBRARY_PATH=/usr/local/lib
-export LD_LIBRARY_PATH=/usr/local/lib
-
 GOOS=$(go env GOOS)
 GOARCH=$(go env GOARCH)
 CGO_ENABLED=${CGO_ENABLED:-0}

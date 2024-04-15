@@ -43,6 +43,7 @@ create-dirs() {
 }
 
 build-local() {
+    echo `export`
     test -f "${BUILD_SOURCE_HOME}/${BUILD_PATH}/$1" && rm -f "${BUILD_SOURCE_HOME}/${BUILD_PATH}/$1"
     cd "${BUILD_SOURCE_HOME}/cmd/$2" || return
     go build -tags="${GOTAGS}" -ldflags="${GOLDFLAGS}" -gcflags="${GOGCFLAGS}" -o="${BUILD_SOURCE_HOME}/${BUILD_PATH}/$1"
@@ -71,6 +72,8 @@ build-manager-local() {
 }
 
 build-trainer-local() {
+    ldconfig /usr/local/lib
+    export CGO_ENABLED=1
     build-local ${TRAINER_BINARY_NAME} trainer
 }
 
