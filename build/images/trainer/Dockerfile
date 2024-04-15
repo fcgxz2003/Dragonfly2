@@ -1,6 +1,6 @@
 ARG BASE_IMAGE=alpine:3.17
 
-FROM golang:1.21.1-alpine3.17 as builder
+FROM golang:1.21.1 as builder
 
 ARG GOPROXY
 ARG GOTAGS
@@ -8,17 +8,16 @@ ARG GOGCFLAGS
 
 WORKDIR /go/src/d7y.io/dragonfly/v2
 
-RUN apk --no-cache add bash make gcc libc-dev git
+RUN apt-get update \
+    && apt-get install -y bash make gcc libc-dev git
 
+RUN apt-get install -y curl \
+    && curl -o libtensorflow.tar.gz https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-linux-x86_64-2.15.0.tar.gz \
+    && tar -C /usr/local -xzf libtensorflow.tar.gz  \ 
+    && rm libtensorflow.tar.gz \
+    && ldconfig /usr/local/lib
+    
 COPY . /go/src/d7y.io/dragonfly/v2
-
-RUN apk --no-cache add curl && \ 
-    curl -o libtensorflow.tar.gz https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-linux-x86_64-2.15.0.tar.gz && \
-    tar zxf libtensorflow.tar.gz -C /usr/local && \ 
-    rm libtensorflow.tar.gz && \
-    ldconfig /usr/local/lib
-
-RUN apt-get -y install --no-install-recommends libprotobuf-dev protobuf-compiler
 
 RUN make build-trainer && make install-trainer
 
