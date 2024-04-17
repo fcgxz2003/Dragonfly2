@@ -71,11 +71,8 @@ build-manager-local() {
 }
 
 build-trainer-local() {
-    echo `ls /usr/glibc-compat/bin`
-    echo `gcc -v`
-    export CC=gcc
+    ldconfig /usr/local/lib
     export CGO_ENABLED=1
-    export CGO_LDFLAGS="-L/usr/glibc-compat/lib -Wl,-rpath,/usr/glibc-compat/lib, -Wl,--dynamic-linker=/usr/glibc-compat/lib64/ld-linux-x86-64.so.2"
     build-local ${TRAINER_BINARY_NAME} trainer
 }
 
