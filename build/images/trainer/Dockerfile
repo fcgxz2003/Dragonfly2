@@ -42,7 +42,10 @@ ENV PATH=/opt/dragonfly/bin:$PATH
 RUN echo "hosts: files dns" > /etc/nsswitch.conf
 
 RUN apt-get update \
-    && apt-get install -y bash iputils-ping vim
+    && apt-get install -y binutils bpfcc-tools curl dnsutils git iproute2 iputils-ping jq netcat socat tree vim wget bash-completion \
+    && rm /bin/sh \
+    && ln -s /bin/bash /bin/sh \
+    && rm -rf /var/lib/apt/lists/* 
 
 COPY --from=builder /opt/dragonfly/bin/trainer /opt/dragonfly/bin/trainer
 COPY --from=builder /usr/local/lib /usr/local/lib
