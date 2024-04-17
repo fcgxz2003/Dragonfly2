@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=ubuntu:latest
+ARG BASE_IMAGE=ubuntu:22.04
 
 FROM golang:1.21.1 as builder
 
@@ -41,9 +41,13 @@ FROM ${BASE_IMAGE}
 ENV PATH=/opt/dragonfly/bin:$PATH
 RUN echo "hosts: files dns" > /etc/nsswitch.conf
 
+RUN apt-get update \
+    && apt-get install -y bash iputils-ping vim
+
 COPY --from=builder /opt/dragonfly/bin/trainer /opt/dragonfly/bin/trainer
 COPY --from=builder /usr/local/lib /usr/local/lib
 COPY --from=health /bin/grpc_health_probe /bin/grpc_health_probe
+
 RUN ldconfig /usr/local/lib
 
 EXPOSE 9090
