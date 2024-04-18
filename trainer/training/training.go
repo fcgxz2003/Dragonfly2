@@ -135,7 +135,6 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 	downloadFile, err := t.storage.OpenDownload(hostID)
 	if err != nil {
 		msg := fmt.Sprintf("open download failed: %s", err.Error())
-		logger.Error(msg)
 		return nil, status.Error(codes.Internal, msg)
 	}
 	defer downloadFile.Close()
@@ -148,7 +147,6 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 		}
 	}()
 	for download := range dc {
-		logger.Info(download)
 		for _, parent := range download.Parents {
 			if parent.ID != "" {
 				// get maxBandwidth locally from pieces.
@@ -181,7 +179,6 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 	graphsageFile, err := t.storage.OpenGraphsage(hostID)
 	if err != nil {
 		msg := fmt.Sprintf("open graphsage records failed: %s", err.Error())
-		logger.Error(msg)
 		return nil, status.Error(codes.Internal, msg)
 	}
 	defer graphsageFile.Close()
@@ -194,7 +191,6 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 		}
 	}()
 	for graphsage := range gc {
-		logger.Info(graphsage)
 		key := pkgredis.MakeBandwidthKeyInTrainer(graphsage.ID, graphsage.SrcHost.IP, graphsage.DestHost.IP)
 		if value, ok := bandwidths[key]; ok {
 			record := Record{}
@@ -244,7 +240,6 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 		}
 	}
 
-	logger.Info(records)
 	return records, nil
 }
 

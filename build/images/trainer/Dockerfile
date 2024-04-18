@@ -53,7 +53,7 @@ RUN apt-get update \
     && ln -s /bin/bash /bin/sh \
     && rm -rf /var/lib/apt/lists/* \
     && echo 'PS1="\[\e[1;32m\]\u@\h \[\e[1;34m\]\w\[\e[0m\]\$ "' >> ~/.bashrc \
-    && bash -c "source ~/.bashrc"
+    && . ~/.bashrc
 
 EXPOSE 9090
 
