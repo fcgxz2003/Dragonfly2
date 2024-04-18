@@ -41,17 +41,19 @@ FROM ${BASE_IMAGE}
 ENV PATH=/opt/dragonfly/bin:$PATH
 RUN echo "hosts: files dns" > /etc/nsswitch.conf
 
-RUN apt-get update \
-    && apt-get install -y binutils bpfcc-tools curl dnsutils git iproute2 iputils-ping jq netcat socat tree vim wget bash-completion \
-    && rm /bin/sh \
-    && ln -s /bin/bash /bin/sh \
-    && rm -rf /var/lib/apt/lists/* 
-
 COPY --from=builder /opt/dragonfly/bin/trainer /opt/dragonfly/bin/trainer
 COPY --from=builder /usr/local/lib /usr/local/lib
 COPY --from=health /bin/grpc_health_probe /bin/grpc_health_probe
 
 RUN ldconfig /usr/local/lib
+
+RUN apt-get update \
+    && apt-get install -y iproute2 iputils-ping vim wget bash-completion \
+    && rm /bin/sh \
+    && ln -s /bin/bash /bin/sh \
+    && rm -rf /var/lib/apt/lists/* \
+    && echo 'PS1="\[\e[1;32m\]\u@\h \[\e[1;34m\]\w\[\e[0m\]\$ "' >> ~/.bashrc \
+    && bash -c "source ~/.bashrc"
 
 EXPOSE 9090
 
