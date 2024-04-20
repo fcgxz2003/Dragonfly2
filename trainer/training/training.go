@@ -24,6 +24,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	tf "github.com/galeone/tensorflow/tensorflow/go"
 	"github.com/gocarina/gocsv"
@@ -147,13 +148,18 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 		}
 	}()
 	for download := range dc {
+		logger.Info(download.ID)
 		for _, parent := range download.Parents {
 			if parent.ID != "" {
 				// get maxBandwidth locally from pieces.
 				var localMaxBandwidth float32
 				for _, piece := range parent.Pieces {
-					if piece.Cost > 0 && float32(piece.Length/piece.Cost) > localMaxBandwidth {
-						localMaxBandwidth = float32(piece.Length / piece.Cost)
+					logger.Info("piece length", float64(piece.Length))
+					logger.Info("piece cost", time.Duration(piece.Cost).Seconds())
+					logger.Info("piece.Length/piece.Cost", float64(piece.Length/1024)/time.Duration(piece.Cost).Seconds())
+					bandwidth := float32(float64(piece.Length) / 1024 / time.Duration(piece.Cost).Seconds())
+					if piece.Cost > 0 && bandwidth > localMaxBandwidth {
+						localMaxBandwidth = bandwidth
 					}
 				}
 
@@ -171,7 +177,7 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 	}
 
 	for k, v := range bandwidths {
-		logger.Info("%s:%s", k, v)
+		logger.Infof("%s:%s", k, v)
 	}
 
 	// Preprocess graphsage training data.
@@ -240,6 +246,8 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 		}
 	}
 
+	logger.Info("records")
+	logger.Info(records)
 	return records, nil
 }
 

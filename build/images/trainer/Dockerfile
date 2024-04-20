@@ -48,7 +48,7 @@ COPY --from=health /bin/grpc_health_probe /bin/grpc_health_probe
 RUN ldconfig /usr/local/lib
 
 RUN apt-get update \
-    && apt-get install -y iproute2 iputils-ping vim wget bash-completion \
+    && apt-get install -y iputils-ping vim bash-completion \
     && rm /bin/sh \
     && ln -s /bin/bash /bin/sh \
     && rm -rf /var/lib/apt/lists/* \
