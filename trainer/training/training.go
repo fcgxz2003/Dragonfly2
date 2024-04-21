@@ -99,17 +99,21 @@ func (t *training) Train(ctx context.Context, ip, hostname string) error {
 
 	// Write record to buffer.
 	t.buffer = append(t.buffer, records...)
+	logger.Info(len(t.buffer))
+	logger.Info(defaultBatchSize)
 	for {
 		if len(t.buffer) < defaultBatchSize {
 			break
 		}
 
-		// if err := t.train(t.buffer[:defaultBatchSize], ip, hostname); err != nil {
-		// 	logger.Info(err)
-		// 	continue
-		// }
-
+		trainData := t.buffer[:defaultBatchSize]
 		t.buffer = t.buffer[defaultBatchSize:]
+		logger.Info(t.buffer)
+		if err := t.train(trainData, ip, hostname); err != nil {
+			logger.Info(err)
+			continue
+		}
+
 	}
 
 	var hostID = idgen.HostIDV2(ip, hostname)
@@ -154,9 +158,6 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 				// get maxBandwidth locally from pieces.
 				var localMaxBandwidth float32
 				for _, piece := range parent.Pieces {
-					logger.Info("piece length", float64(piece.Length))
-					logger.Info("piece cost", time.Duration(piece.Cost).Seconds())
-					logger.Info("piece.Length/piece.Cost", float64(piece.Length/1024)/time.Duration(piece.Cost).Seconds())
 					bandwidth := float32(float64(piece.Length) / 1024 / time.Duration(piece.Cost).Seconds())
 					if piece.Cost > 0 && bandwidth > localMaxBandwidth {
 						localMaxBandwidth = bandwidth
@@ -246,144 +247,149 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 		}
 	}
 
-	logger.Info("records")
-	logger.Info(records)
 	return records, nil
 }
 
-// func (t *training) train(records []Record, ip, hostname string) error {
-// 	gm, _ := tf.LoadSavedModel("base_model", []string{"serve"}, nil)
+func (t *training) train(records []Record, ip, hostname string) error {
+	gm, err := tf.LoadSavedModel("model/base_model", []string{"serve"}, nil)
+	if err != nil {
+		return err
+	}
 
-// 	var (
-// 		srcRawData       = make([][]float32, 0, defaultBatchSize)
-// 		srcNegRawData    = make([][][]float32, 0, defaultBatchSize)
-// 		srcNegNegRawData = make([][][][]float32, 0, defaultBatchSize)
-// 		dstRawData       = make([][]float32, 0, defaultBatchSize)
-// 		dstNegRawData    = make([][][]float32, 0, defaultBatchSize)
-// 		dstNegNegRawData = make([][][][]float32, 0, defaultBatchSize)
-// 		labelsRawData    = make([]float32, 0, defaultBatchSize)
-// 	)
+	for i, _ := range gm.Graph.Operations() {
+		fmt.Println("operator-", i, ":", gm.Graph.Operations()[i].Name())
+	}
 
-// 	for _, record := range records {
-// 		srcRawData = append(srcRawData, record.SrcFeature)
-// 		srcNegRawData = append(srcNegRawData, record.SrcNegFeature)
-// 		srcNegNegRawData = append(srcNegNegRawData, record.SrcNegNegFeature)
-// 		dstRawData = append(dstRawData, record.DestFeature)
-// 		dstNegRawData = append(dstNegRawData, record.DestNegFeature)
-// 		dstNegNegRawData = append(dstNegNegRawData, record.DestNegNegFeature)
-// 		labelsRawData = append(labelsRawData, record.Bandwidth)
-// 	}
+	// 	var (
+	// 		srcRawData       = make([][]float32, 0, defaultBatchSize)
+	// 		srcNegRawData    = make([][][]float32, 0, defaultBatchSize)
+	// 		srcNegNegRawData = make([][][][]float32, 0, defaultBatchSize)
+	// 		dstRawData       = make([][]float32, 0, defaultBatchSize)
+	// 		dstNegRawData    = make([][][]float32, 0, defaultBatchSize)
+	// 		dstNegNegRawData = make([][][][]float32, 0, defaultBatchSize)
+	// 		labelsRawData    = make([]float32, 0, defaultBatchSize)
+	// 	)
 
-// 	// Convert raw data to tensor.
-// 	src, err := tf.NewTensor(srcRawData)
-// 	if err != nil {
-// 		logger.Error(err)
-// 		return err
-// 	}
+	// 	for _, record := range records {
+	// 		srcRawData = append(srcRawData, record.SrcFeature)
+	// 		srcNegRawData = append(srcNegRawData, record.SrcNegFeature)
+	// 		srcNegNegRawData = append(srcNegNegRawData, record.SrcNegNegFeature)
+	// 		dstRawData = append(dstRawData, record.DestFeature)
+	// 		dstNegRawData = append(dstNegRawData, record.DestNegFeature)
+	// 		dstNegNegRawData = append(dstNegNegRawData, record.DestNegNegFeature)
+	// 		labelsRawData = append(labelsRawData, record.Bandwidth)
+	// 	}
 
-// 	srcNeg, err := tf.NewTensor(srcNegRawData)
-// 	if err != nil {
-// 		logger.Error(err)
-// 		return err
-// 	}
+	// 	// Convert raw data to tensor.
+	// 	src, err := tf.NewTensor(srcRawData)
+	// 	if err != nil {
+	// 		logger.Error(err)
+	// 		return err
+	// 	}
 
-// 	srcNegNeg, err := tf.NewTensor(srcNegNegRawData)
-// 	if err != nil {
-// 		logger.Error(err)
-// 		return err
-// 	}
+	// 	srcNeg, err := tf.NewTensor(srcNegRawData)
+	// 	if err != nil {
+	// 		logger.Error(err)
+	// 		return err
+	// 	}
 
-// 	dst, err := tf.NewTensor(dstRawData)
-// 	if err != nil {
-// 		logger.Error(err)
-// 		return err
-// 	}
+	// 	srcNegNeg, err := tf.NewTensor(srcNegNegRawData)
+	// 	if err != nil {
+	// 		logger.Error(err)
+	// 		return err
+	// 	}
 
-// 	dstNeg, err := tf.NewTensor(dstNegRawData)
-// 	if err != nil {
-// 		logger.Error(err)
-// 		return err
-// 	}
+	// 	dst, err := tf.NewTensor(dstRawData)
+	// 	if err != nil {
+	// 		logger.Error(err)
+	// 		return err
+	// 	}
 
-// 	dstNegNeg, err := tf.NewTensor(dstNegNegRawData)
-// 	if err != nil {
-// 		logger.Error(err)
-// 		return err
-// 	}
+	// 	dstNeg, err := tf.NewTensor(dstNegRawData)
+	// 	if err != nil {
+	// 		logger.Error(err)
+	// 		return err
+	// 	}
 
-// 	labels, err := tf.NewTensor(labelsRawData)
-// 	if err != nil {
-// 		logger.Error(err)
-// 		return err
-// 	}
+	// 	dstNegNeg, err := tf.NewTensor(dstNegNegRawData)
+	// 	if err != nil {
+	// 		logger.Error(err)
+	// 		return err
+	// 	}
 
-// 	// Start training.
-// 	result, err := gm.Session.Run(
-// 		map[tf.Output]*tf.Tensor{
-// 			gm.Graph.Operation("train_src").Output(0):         src,
-// 			gm.Graph.Operation("train_src_neg").Output(0):     srcNeg,
-// 			gm.Graph.Operation("train_src_neg_neg").Output(0): srcNegNeg,
-// 			gm.Graph.Operation("train_dst").Output(0):         dst,
-// 			gm.Graph.Operation("train_dst_neg").Output(0):     dstNeg,
-// 			gm.Graph.Operation("train_dst_neg_neg").Output(0): dstNegNeg,
-// 			gm.Graph.Operation("train_labels").Output(0):      labels,
-// 		},
-// 		[]tf.Output{
-// 			gm.Graph.Operation("StatefulPartitionedCall_1").Output(0),
-// 		},
-// 		nil,
-// 	)
-// 	if err != nil {
-// 		logger.Error(err)
-// 		return err
-// 	}
+	// 	labels, err := tf.NewTensor(labelsRawData)
+	// 	if err != nil {
+	// 		logger.Error(err)
+	// 		return err
+	// 	}
 
-// 	loss, ok := result[0].Value().(float32)
-// 	if !ok {
-// 		logger.Info("error output")
-// 		return errors.New("error output")
-// 	}
+	// 	// Start training.
+	// 	result, err := gm.Session.Run(
+	// 		map[tf.Output]*tf.Tensor{
+	// 			gm.Graph.Operation("train_src").Output(0):         src,
+	// 			gm.Graph.Operation("train_src_neg").Output(0):     srcNeg,
+	// 			gm.Graph.Operation("train_src_neg_neg").Output(0): srcNegNeg,
+	// 			gm.Graph.Operation("train_dst").Output(0):         dst,
+	// 			gm.Graph.Operation("train_dst_neg").Output(0):     dstNeg,
+	// 			gm.Graph.Operation("train_dst_neg_neg").Output(0): dstNegNeg,
+	// 			gm.Graph.Operation("train_labels").Output(0):      labels,
+	// 		},
+	// 		[]tf.Output{
+	// 			gm.Graph.Operation("StatefulPartitionedCall_1").Output(0),
+	// 		},
+	// 		nil,
+	// 	)
+	// 	if err != nil {
+	// 		logger.Error(err)
+	// 		return err
+	// 	}
 
-// 	t.losses = append(t.losses, loss)
-// 	t.epoch++
+	// 	loss, ok := result[0].Value().(float32)
+	// 	if !ok {
+	// 		logger.Info("error output")
+	// 		return errors.New("error output")
+	// 	}
 
-// 	// Reach the training rounds, save and upload the model.
-// 	if t.epoch >= defaultEpoch {
-// 		t.epoch = 0
-// 		t.losses = t.losses[:0]
-// 		if err := t.saveModel(gm); err != nil {
-// 			logger.Info(err)
-// 			return err
-// 		}
+	// 	t.losses = append(t.losses, loss)
+	// 	t.epoch++
 
-// 		// Compress trained model.
-// 		data, err := compress("model")
-// 		if err != nil {
-// 			logger.Info(err)
-// 			return err
-// 		}
+	// 	// Reach the training rounds, save and upload the model.
+	// 	if t.epoch >= defaultEpoch {
+	// 		t.epoch = 0
+	// 		t.losses = t.losses[:0]
+	// 		if err := t.saveModel(gm); err != nil {
+	// 			logger.Info(err)
+	// 			return err
+	// 		}
 
-// 		// Upload trained model to manager.
-// 		if err := t.managerClient.CreateModel(context.Background(), &managerv1.CreateModelRequest{
-// 			Hostname: hostname,
-// 			Ip:       ip,
-// 			Request: &managerv1.CreateModelRequest_CreateGnnRequest{
-// 				CreateGnnRequest: &managerv1.CreateGNNRequest{
-// 					Data:      data,
-// 					Recall:    0,
-// 					Precision: 0,
-// 					F1Score:   0,
-// 				},
-// 			},
-// 		}); err != nil {
-// 			logger.Error("upload model to manager error: %v", err.Error())
-// 			return err
-// 		}
+	// 		// Compress trained model.
+	// 		data, err := compress("model")
+	// 		if err != nil {
+	// 			logger.Info(err)
+	// 			return err
+	// 		}
 
-// 	}
+	// 		// Upload trained model to manager.
+	// 		if err := t.managerClient.CreateModel(context.Background(), &managerv1.CreateModelRequest{
+	// 			Hostname: hostname,
+	// 			Ip:       ip,
+	// 			Request: &managerv1.CreateModelRequest_CreateGnnRequest{
+	// 				CreateGnnRequest: &managerv1.CreateGNNRequest{
+	// 					Data:      data,
+	// 					Recall:    0,
+	// 					Precision: 0,
+	// 					F1Score:   0,
+	// 				},
+	// 			},
+	// 		}); err != nil {
+	// 			logger.Error("upload model to manager error: %v", err.Error())
+	// 			return err
+	// 		}
 
-// 	return nil
-// }
+	// 	}
+
+	return nil
+}
 
 // Save tensorflow model.
 func (t *training) saveModel(gm *tf.SavedModel) error {

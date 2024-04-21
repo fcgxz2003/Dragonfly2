@@ -48,12 +48,13 @@ COPY --from=health /bin/grpc_health_probe /bin/grpc_health_probe
 RUN ldconfig /usr/local/lib
 
 RUN apt-get update \
-    && apt-get install -y iputils-ping vim bash-completion \
+    && apt-get install -y vim bash-completion \
     && rm /bin/sh \
     && ln -s /bin/bash /bin/sh \
-    && rm -rf /var/lib/apt/lists/* \
-    && echo 'PS1="\[\e[1;32m\]\u@\h \[\e[1;34m\]\w\[\e[0m\]\$ "' >> ~/.bashrc \
-    && . ~/.bashrc
+    && rm -rf /var/lib/apt/lists/* 
+    
+    # && echo 'PS1="\[\e[1;32m\]\u@\h \[\e[1;34m\]\w\[\e[0m\]\$ "' >> ~/.bashrc \
+    # && . ~/.bashrc
 
 EXPOSE 9090
 
