@@ -32,6 +32,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	managerv1 "d7y.io/api/v2/pkg/apis/manager/v1"
 	logger "d7y.io/dragonfly/v2/internal/dflog"
 	"d7y.io/dragonfly/v2/pkg/idgen"
 	pkgredis "d7y.io/dragonfly/v2/pkg/redis"
@@ -366,30 +367,28 @@ func (t *training) train(records []Record, ip, hostname string) error {
 			return err
 		}
 
-		// // Compress trained model.
-		// data, err := compress("model")
-		// if err != nil {
-		// 	logger.Info(err)
-		// 	return err
-		// }
+		// Compress trained model.
+		data, err := compress(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model"))
+		if err != nil {
+			return err
+		}
 
-		// // Upload trained model to manager.
-		// if err := t.managerClient.CreateModel(context.Background(), &managerv1.CreateModelRequest{
-		// 	Hostname: hostname,
-		// 	Ip:       ip,
-		// 	Request: &managerv1.CreateModelRequest_CreateGnnRequest{
-		// 		CreateGnnRequest: &managerv1.CreateGNNRequest{
-		// 			Data:      data,
-		// 			Recall:    0,
-		// 			Precision: 0,
-		// 			F1Score:   0,
-		// 		},
-		// 	},
-		// }); err != nil {
-		// 	logger.Error("upload model to manager error: %v", err.Error())
-		// 	return err
-		// }
-
+		// Upload trained model to manager.
+		if err := t.managerClient.CreateModel(context.Background(), &managerv1.CreateModelRequest{
+			Hostname: hostname,
+			Ip:       ip,
+			Request: &managerv1.CreateModelRequest_CreateGnnRequest{
+				CreateGnnRequest: &managerv1.CreateGNNRequest{
+					Data:      data,
+					Recall:    0,
+					Precision: 0,
+					F1Score:   0,
+				},
+			},
+		}); err != nil {
+			logger.Error("upload model to manager error: %v", err.Error())
+			return err
+		}
 	}
 
 	return nil
