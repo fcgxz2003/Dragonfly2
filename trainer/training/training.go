@@ -64,6 +64,8 @@ type training struct {
 	// Trainer service config.
 	config *config.Config
 
+	baseDir string
+
 	// Storage interface.
 	storage storage.Storage
 
@@ -81,9 +83,10 @@ type training struct {
 }
 
 // New returns a new Training.
-func New(cfg *config.Config, managerClient managerclient.V1, storage storage.Storage) Training {
+func New(cfg *config.Config, baseDir string, managerClient managerclient.V1, storage storage.Storage) Training {
 	return &training{
 		config:        cfg,
+		baseDir:       baseDir,
 		storage:       storage,
 		managerClient: managerClient,
 		buffer:        make([]Record, 0),
@@ -252,7 +255,8 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 }
 
 func (t *training) train(records []Record, ip, hostname string) error {
-	gm, err := tf.LoadSavedModel("model/base_model", []string{"serve"}, nil)
+	logger.Info(t.baseDir)
+	gm, err := tf.LoadSavedModel(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model"), []string{"serve"}, nil)
 	if err != nil {
 		return err
 	}
@@ -347,7 +351,6 @@ func (t *training) train(records []Record, ip, hostname string) error {
 
 	loss, ok := result[0].Value().(float32)
 	if !ok {
-		logger.Info("error output")
 		return errors.New("error output")
 	}
 
@@ -359,10 +362,9 @@ func (t *training) train(records []Record, ip, hostname string) error {
 		t.epoch = 0
 		t.losses = t.losses[:0]
 		logger.Info("save model")
-		// if err := t.saveModel(gm); err != nil {
-		// 	logger.Info(err)
-		// 	return err
-		// }
+		if err := t.saveModel(gm); err != nil {
+			return err
+		}
 
 		// // Compress trained model.
 		// data, err := compress("model")
@@ -395,18 +397,18 @@ func (t *training) train(records []Record, ip, hostname string) error {
 
 // Save tensorflow model.
 func (t *training) saveModel(gm *tf.SavedModel) error {
-	savedModel, err := os.ReadFile("model/base_model/saved_model.pb")
+	savedModel, err := os.ReadFile(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model/saved_model.pb"))
 	if err != nil {
 		return err
 	}
 
-	os.RemoveAll("model/base_model")
-	os.MkdirAll("model/base_model/variables", os.ModePerm)
-	if err := os.WriteFile("model/base_model/saved_model.pb", savedModel, os.ModePerm); err != nil {
+	os.RemoveAll(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model"))
+	os.MkdirAll(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model/variables"), os.ModePerm)
+	if err := os.WriteFile(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model/saved_model.pb"), savedModel, os.ModePerm); err != nil {
 		return err
 	}
 
-	fileName, err := tf.NewTensor("model/base_model/variables/variables")
+	fileName, err := tf.NewTensor(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model/variables/variables"))
 	if err != nil {
 		return err
 	}
@@ -424,6 +426,7 @@ func (t *training) saveModel(gm *tf.SavedModel) error {
 		return err
 	}
 
+	logger.Info("save model success")
 	return nil
 }
 
