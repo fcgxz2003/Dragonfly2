@@ -34,3 +34,7 @@ manager:
 
 minio:
   endpoint: 127.0.0.1:9000
+
+train:
+  batchsize: 32
+  epoch: 100

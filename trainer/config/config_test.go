@@ -88,6 +88,10 @@ func TestConfig_Load(t *testing.T) {
 		Minio: MinioConfig{
 			Endpoint: "127.0.0.1:9000",
 		},
+		Train: TrainConfig{
+			BatchSize: 32,
+			Epoch:     100,
+		},
 	}
 
 	trainerConfigYAML := &Config{}

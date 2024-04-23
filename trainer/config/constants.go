@@ -62,3 +62,9 @@ const (
 	// DefaultLogRotateMaxBackups is the default number of old log files to keep.
 	DefaultLogRotateMaxBackups = 20
 )
+
+const (
+	DefaultBatchSize = 32
+
+	DefaultEpoch = 100
+)

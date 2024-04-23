@@ -48,6 +48,8 @@ type Config struct {
 	Manager ManagerConfig `yaml:"manager" mapstructure:"manager"`
 
 	Minio MinioConfig `yaml:"minio" mapstructure:"minio"`
+
+	Train TrainConfig `yaml:"train" mapstructure:"train"`
 }
 
 type NetworkConfig struct {
@@ -134,6 +136,11 @@ type MinioConfig struct {
 	Endpoint string `yaml:"endpoint" mapstructure:"endpoint"`
 }
 
+type TrainConfig struct {
+	BatchSize int `yaml:"batchsize" mapstructure:"batchsize"`
+	Epoch     int `yaml:"epoch" mapstructure:"epoch"`
+}
+
 // New default configuration.
 func New() *Config {
 	return &Config{
@@ -163,6 +170,10 @@ func New() *Config {
 		},
 		Manager: ManagerConfig{},
 		Minio:   MinioConfig{},
+		Train: TrainConfig{
+			BatchSize: DefaultBatchSize,
+			Epoch:     DefaultEpoch,
+		},
 	}
 }
 

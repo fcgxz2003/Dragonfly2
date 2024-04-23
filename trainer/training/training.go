@@ -45,10 +45,6 @@ const (
 	defaultAggregationNumber = 3
 
 	defaultIPv4FeatureLength = 32
-
-	defaultBatchSize = 5
-
-	defaultEpoch = 1
 )
 
 // Training defines the interface to train GNN and MLP model.
@@ -77,9 +73,6 @@ type training struct {
 
 	// Training epoch.
 	epoch int
-
-	// Loss of each epoch.
-	losses []float32
 }
 
 // New returns a new Training.
@@ -113,14 +106,15 @@ func (t *training) Train(ctx context.Context, ip, hostname string) error {
 	}
 
 	// Write record to buffer.
+	batchsize := t.config.Train.BatchSize
 	t.buffer = append(t.buffer, records...)
 	for {
-		if len(t.buffer) < defaultBatchSize {
+		if len(t.buffer) < batchsize {
 			break
 		}
 
-		trainData := t.buffer[:defaultBatchSize]
-		t.buffer = t.buffer[defaultBatchSize:]
+		trainData := t.buffer[:batchsize]
+		t.buffer = t.buffer[batchsize:]
 		if err := t.train(trainData, ip, hostname); err != nil {
 			logger.Info(err)
 			continue
@@ -269,13 +263,14 @@ func (t *training) train(records []Record, ip, hostname string) error {
 	}
 
 	var (
-		srcRawData       = make([][]float32, 0, defaultBatchSize)
-		srcNegRawData    = make([][][]float32, 0, defaultBatchSize)
-		srcNegNegRawData = make([][][][]float32, 0, defaultBatchSize)
-		dstRawData       = make([][]float32, 0, defaultBatchSize)
-		dstNegRawData    = make([][][]float32, 0, defaultBatchSize)
-		dstNegNegRawData = make([][][][]float32, 0, defaultBatchSize)
-		labelsRawData    = make([]float32, 0, defaultBatchSize)
+		batchsize        = t.config.Train.BatchSize
+		srcRawData       = make([][]float32, 0, batchsize)
+		srcNegRawData    = make([][][]float32, 0, batchsize)
+		srcNegNegRawData = make([][][][]float32, 0, batchsize)
+		dstRawData       = make([][]float32, 0, batchsize)
+		dstNegRawData    = make([][][]float32, 0, batchsize)
+		dstNegNegRawData = make([][][][]float32, 0, batchsize)
+		labelsRawData    = make([]float32, 0, batchsize)
 	)
 
 	for _, record := range records {
@@ -346,20 +341,18 @@ func (t *training) train(records []Record, ip, hostname string) error {
 
 	loss, ok := result[0].Value().(float32)
 	if !ok {
-		return errors.New("error output")
+		return errors.New("error loss")
 	}
 
-	t.losses = append(t.losses, loss)
+	logger.Infof("model train loss is: %f", loss)
+	if err := t.saveModel(gm); err != nil {
+		return err
+	}
+
 	t.epoch++
-
 	// Reach the training rounds, save and upload the model.
-	if t.epoch >= defaultEpoch {
+	if t.epoch >= t.config.Train.Epoch {
 		t.epoch = 0
-		t.losses = t.losses[:0]
-		if err := t.saveModel(gm); err != nil {
-			return err
-		}
-
 		if err := t.uploadModel(ip, hostname); err != nil {
 			return err
 		}
