@@ -59,6 +59,8 @@ type Server struct {
 	// Manager client.
 	managerClient managerclient.V1
 
+	training training.Training
+
 	// Storage interface.
 	storage storage.Storage
 }
@@ -91,10 +93,14 @@ func New(ctx context.Context, cfg *config.Config, d dfpath.Dfpath) (*Server, err
 	s.storage = storage.New(d.DataDir())
 
 	// Initialize Training.
-	training := training.New(cfg, d.DataDir(), s.managerClient, s.storage)
+	training, err := training.New(cfg, d.DataDir(), s.managerClient, s.storage)
+	if err != nil {
+		return nil, err
+	}
+	s.training = training
 
 	// Initialize trainer grpc server.
-	s.grpcServer = rpcserver.New(cfg, s.storage, training)
+	s.grpcServer = rpcserver.New(cfg, s.storage, s.training)
 
 	// Initialize metrics.
 	if cfg.Metrics.Enable {

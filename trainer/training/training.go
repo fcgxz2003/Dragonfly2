@@ -83,7 +83,7 @@ type training struct {
 }
 
 // New returns a new Training.
-func New(cfg *config.Config, baseDir string, managerClient managerclient.V1, storage storage.Storage) Training {
+func New(cfg *config.Config, baseDir string, managerClient managerclient.V1, storage storage.Storage) (Training, error) {
 	endpoint := "210.30.96.102:30304"
 
 	// Initialize minio client object.
@@ -92,7 +92,7 @@ func New(cfg *config.Config, baseDir string, managerClient managerclient.V1, sto
 		Secure: false,
 	})
 	if err != nil {
-		fmt.Println(err)
+		return nil, err
 	}
 
 	return &training{
@@ -102,7 +102,7 @@ func New(cfg *config.Config, baseDir string, managerClient managerclient.V1, sto
 		managerClient: managerClient,
 		minioClient:   minioClient,
 		buffer:        make([]Record, 0),
-	}
+	}, err
 }
 
 // Train begins training GNN and MLP model.
@@ -115,8 +115,6 @@ func (t *training) Train(ctx context.Context, ip, hostname string) error {
 
 	// Write record to buffer.
 	t.buffer = append(t.buffer, records...)
-	logger.Info(len(t.buffer))
-	logger.Info(defaultBatchSize)
 	for {
 		if len(t.buffer) < defaultBatchSize {
 			break
@@ -124,7 +122,6 @@ func (t *training) Train(ctx context.Context, ip, hostname string) error {
 
 		trainData := t.buffer[:defaultBatchSize]
 		t.buffer = t.buffer[defaultBatchSize:]
-		logger.Info(t.buffer)
 		if err := t.train(trainData, ip, hostname); err != nil {
 			logger.Info(err)
 			continue
