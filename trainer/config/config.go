@@ -231,6 +231,14 @@ func (cfg *Config) Validate() error {
 		return errors.New("minio requires parameter endpoint")
 	}
 
+	if cfg.Train.BatchSize <= 0 {
+		return errors.New("train requires parameter batchsize")
+	}
+
+	if cfg.Train.Epoch <= 0 {
+		return errors.New("train requires parameter ephco")
+	}
+
 	return nil
 }
 
