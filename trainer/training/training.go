@@ -269,10 +269,6 @@ func (t *training) train(records []Record, ip, hostname string) error {
 		return err
 	}
 
-	for i, _ := range gm.Graph.Operations() {
-		fmt.Println("operator-", i, ":", gm.Graph.Operations()[i].Name())
-	}
-
 	var (
 		srcRawData       = make([][]float32, 0, defaultBatchSize)
 		srcNegRawData    = make([][][]float32, 0, defaultBatchSize)
@@ -386,27 +382,27 @@ func (t *training) train(records []Record, ip, hostname string) error {
 
 // Save tensorflow model.
 func (t *training) saveModel(gm *tf.SavedModel) error {
-	savedModel, err := os.ReadFile(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model/1/model.savedmodel/saved_model.pb"))
+	savedModel, err := os.ReadFile(fmt.Sprintf("%s%s", t.baseDir, "/base_model/1/model.savedmodel/saved_model.pb"))
 	if err != nil {
 		return err
 	}
 
-	configpbtxt, err := os.ReadFile(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model/config.pbtxt"))
+	configpbtxt, err := os.ReadFile(fmt.Sprintf("%s%s", t.baseDir, "/base_model/config.pbtxt"))
 	if err != nil {
 		return err
 	}
 
-	os.RemoveAll(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model"))
-	os.MkdirAll(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model/1/model.savedmodel/variables"), os.ModePerm)
-	if err := os.WriteFile(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model/1/model.savedmodel/saved_model.pb"), savedModel, os.ModePerm); err != nil {
+	os.RemoveAll(fmt.Sprintf("%s%s", t.baseDir, "/base_model"))
+	os.MkdirAll(fmt.Sprintf("%s%s", t.baseDir, "/base_model/1/model.savedmodel/variables"), os.ModePerm)
+	if err := os.WriteFile(fmt.Sprintf("%s%s", t.baseDir, "/base_model/1/model.savedmodel/saved_model.pb"), savedModel, os.ModePerm); err != nil {
 		return err
 	}
 
-	if err := os.WriteFile(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model/config.pbtxt"), configpbtxt, os.ModePerm); err != nil {
+	if err := os.WriteFile(fmt.Sprintf("%s%s", t.baseDir, "/base_model/config.pbtxt"), configpbtxt, os.ModePerm); err != nil {
 		return err
 	}
 
-	fileName, err := tf.NewTensor(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model/1/model.savedmodel/variables/variables"))
+	fileName, err := tf.NewTensor(fmt.Sprintf("%s%s", t.baseDir, "/base_model/1/model.savedmodel/variables/variables"))
 	if err != nil {
 		return err
 	}
@@ -430,6 +426,51 @@ func (t *training) saveModel(gm *tf.SavedModel) error {
 
 // Upload model to minio.
 func (t *training) uploadModel(ip, hostname string) error {
+	ctx := context.Background()
+	bucketName := fmt.Sprintf("%s:%s:%s", ip, hostname, "models")
+	if err := t.minioClient.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{}); err != nil {
+		// Check to see if we already own this bucket
+		exists, err := t.minioClient.BucketExists(ctx, bucketName)
+		if err == nil && !exists {
+			if err := t.minioClient.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{}); err != nil {
+				return nil
+			}
+		} else if err != nil {
+			return nil
+		}
+	}
+
+	objectName := "base_model/1/model.savedmodel/saved_model.pb"
+	filePath := fmt.Sprintf("%s%s", t.baseDir, "base_model/1/model.savedmodel/saved_model.pb")
+	info, err := t.minioClient.FPutObject(ctx, bucketName, objectName, filePath, minio.PutObjectOptions{})
+	if err != nil {
+		logger.Info(err)
+	}
+	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
+
+	objectName = "base_model/config.pbtxt"
+	filePath = fmt.Sprintf("%s%s", t.baseDir, "base_model/config.pbtxt")
+	info, err = t.minioClient.FPutObject(ctx, bucketName, objectName, filePath, minio.PutObjectOptions{})
+	if err != nil {
+		logger.Info(err)
+	}
+	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
+
+	objectName = "base_model/1/model.savedmodel/variables/variables.data-00000-of-00001"
+	filePath = fmt.Sprintf("%s%s", t.baseDir, "base_model/1/model.savedmodel/variables/variables.data-00000-of-00001")
+	info, err = t.minioClient.FPutObject(ctx, bucketName, objectName, filePath, minio.PutObjectOptions{})
+	if err != nil {
+		logger.Info(err)
+	}
+	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
+
+	objectName = "base_model/1/model.savedmodel/variables/variables.index"
+	filePath = fmt.Sprintf("%s%s", t.baseDir, "base_model/1/model.savedmodel/variables/variables.index")
+	info, err = t.minioClient.FPutObject(ctx, bucketName, objectName, filePath, minio.PutObjectOptions{})
+	if err != nil {
+		logger.Info(err)
+	}
+	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
 
 	return nil
 }
