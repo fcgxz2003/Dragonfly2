@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"math"
 	"math/rand"
 	"net"
@@ -32,6 +33,7 @@ import (
 	mathmatics "d7y.io/dragonfly/v2/pkg/math"
 	inferenceclient "d7y.io/dragonfly/v2/pkg/rpc/inference/client"
 	"d7y.io/dragonfly/v2/pkg/types"
+	"d7y.io/dragonfly/v2/scheduler/config"
 	"d7y.io/dragonfly/v2/scheduler/networktopology"
 	"d7y.io/dragonfly/v2/scheduler/resource"
 	"d7y.io/dragonfly/v2/scheduler/storage"
@@ -57,6 +59,7 @@ const (
 // evaluatorMachineLearning is an implementation of Evaluator.
 type evaluatorMachineLearning struct {
 	evaluator
+	config          *config.Config
 	inferenceClient inferenceclient.V1
 	networkTopology networktopology.NetworkTopology
 	storage         storage.Storage
@@ -83,6 +86,13 @@ func WithNetworkTopologyInMachineLearning(networkTopology networktopology.Networ
 func WithStorage(storage storage.Storage) MachineLearningOption {
 	return func(e *evaluatorMachineLearning) {
 		e.storage = storage
+	}
+}
+
+// WithConfig sets the inference config.
+func WithConfig(config *config.Config) MachineLearningOption {
+	return func(e *evaluatorMachineLearning) {
+		e.config = config
 	}
 }
 
@@ -408,8 +418,9 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 		},
 	}
 
+	modelName := fmt.Sprintf("%s:%s", e.config.Server.AdvertiseIP.String(), e.config.Server.Host)
 	inferRequest := triton.ModelInferRequest{
-		ModelName:    "models",
+		ModelName:    modelName,
 		ModelVersion: "1",
 		Inputs:       inferInputs,
 		Outputs:      inferOutputs,

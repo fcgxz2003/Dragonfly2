@@ -20,7 +20,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 	"time"
 
 	tf "github.com/galeone/tensorflow/tensorflow/go"
@@ -266,7 +268,16 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 }
 
 func (t *training) train(records []Record, ip, hostname string) error {
-	gm, err := tf.LoadSavedModel(fmt.Sprintf("%s%s", t.baseDir, "/base_model/1/model.savedmodel/"), []string{"serve"}, nil)
+	modelPath := fmt.Sprintf("%s/%s:%s", t.baseDir, ip, hostname)
+	if _, err := os.Stat(modelPath); os.IsNotExist(err) {
+		// copy base model to this scheduler model.
+		baseModelPath := fmt.Sprintf("%s/%s", t.baseDir, "base_model")
+		if err := copyFolder(baseModelPath, modelPath); err != nil {
+			return err
+		}
+	}
+
+	gm, err := tf.LoadSavedModel(fmt.Sprintf("%s%s", modelPath, "/1/model.savedmodel/"), []string{"serve"}, nil)
 	if err != nil {
 		return err
 	}
@@ -354,7 +365,7 @@ func (t *training) train(records []Record, ip, hostname string) error {
 	}
 
 	logger.Infof("model train loss is: %f", loss)
-	if err := t.saveModel(gm); err != nil {
+	if err := t.saveModel(gm, ip, hostname); err != nil {
 		return err
 	}
 
@@ -372,28 +383,29 @@ func (t *training) train(records []Record, ip, hostname string) error {
 }
 
 // Save tensorflow model.
-func (t *training) saveModel(gm *tf.SavedModel) error {
-	savedModel, err := os.ReadFile(fmt.Sprintf("%s%s", t.baseDir, "/base_model/1/model.savedmodel/saved_model.pb"))
+func (t *training) saveModel(gm *tf.SavedModel, ip, hostname string) error {
+	modelPath := fmt.Sprintf("%s/%s:%s", t.baseDir, ip, hostname)
+	savedModel, err := os.ReadFile(fmt.Sprintf("%s%s", modelPath, "/1/model.savedmodel/saved_model.pb"))
 	if err != nil {
 		return err
 	}
 
-	configpbtxt, err := os.ReadFile(fmt.Sprintf("%s%s", t.baseDir, "/base_model/config.pbtxt"))
+	configpbtxt, err := os.ReadFile(fmt.Sprintf("%s%s", modelPath, "/config.pbtxt"))
 	if err != nil {
 		return err
 	}
 
-	os.RemoveAll(fmt.Sprintf("%s%s", t.baseDir, "/base_model"))
-	os.MkdirAll(fmt.Sprintf("%s%s", t.baseDir, "/base_model/1/model.savedmodel/variables"), os.ModePerm)
-	if err := os.WriteFile(fmt.Sprintf("%s%s", t.baseDir, "/base_model/1/model.savedmodel/saved_model.pb"), savedModel, os.ModePerm); err != nil {
+	os.RemoveAll(modelPath)
+	os.MkdirAll(fmt.Sprintf("%s%s", modelPath, "/1/model.savedmodel/variables"), os.ModePerm)
+	if err := os.WriteFile(fmt.Sprintf("%s%s", modelPath, "/1/model.savedmodel/saved_model.pb"), savedModel, os.ModePerm); err != nil {
 		return err
 	}
 
-	if err := os.WriteFile(fmt.Sprintf("%s%s", t.baseDir, "/base_model/config.pbtxt"), configpbtxt, os.ModePerm); err != nil {
+	if err := os.WriteFile(fmt.Sprintf("%s%s", modelPath, "/config.pbtxt"), configpbtxt, os.ModePerm); err != nil {
 		return err
 	}
 
-	fileName, err := tf.NewTensor(fmt.Sprintf("%s%s", t.baseDir, "/base_model/1/model.savedmodel/variables/variables"))
+	fileName, err := tf.NewTensor(fmt.Sprintf("%s%s", modelPath, "/1/model.savedmodel/variables/variables"))
 	if err != nil {
 		return err
 	}
@@ -418,9 +430,10 @@ func (t *training) saveModel(gm *tf.SavedModel) error {
 // Upload model to minio.
 func (t *training) uploadModel(ip, hostname string) error {
 	ctx := context.Background()
-	// Bucket name can not be longger than 63 characters.
+	modelPath := fmt.Sprintf("%s/%s:%s", t.baseDir, ip, hostname)
+
 	objectName := fmt.Sprintf("%s:%s%s", ip, hostname, "/1/model.savedmodel/saved_model.pb")
-	filePath := fmt.Sprintf("%s%s", t.baseDir, "/base_model/1/model.savedmodel/saved_model.pb")
+	filePath := fmt.Sprintf("%s%s", modelPath, "/1/model.savedmodel/saved_model.pb")
 	info, err := t.minioClient.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
 		return err
@@ -428,7 +441,7 @@ func (t *training) uploadModel(ip, hostname string) error {
 	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
 
 	objectName = fmt.Sprintf("%s:%s%s", ip, hostname, "/config.pbtxt")
-	filePath = fmt.Sprintf("%s%s", t.baseDir, "/base_model/config.pbtxt")
+	filePath = fmt.Sprintf("%s%s", modelPath, "/config.pbtxt")
 	info, err = t.minioClient.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
 		return err
@@ -436,7 +449,7 @@ func (t *training) uploadModel(ip, hostname string) error {
 	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
 
 	objectName = fmt.Sprintf("%s:%s%s", ip, hostname, "/1/model.savedmodel/variables/variables.data-00000-of-00001")
-	filePath = fmt.Sprintf("%s%s", t.baseDir, "/base_model/1/model.savedmodel/variables/variables.data-00000-of-00001")
+	filePath = fmt.Sprintf("%s%s", modelPath, "/1/model.savedmodel/variables/variables.data-00000-of-00001")
 	info, err = t.minioClient.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
 		return err
@@ -444,7 +457,7 @@ func (t *training) uploadModel(ip, hostname string) error {
 	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
 
 	objectName = fmt.Sprintf("%s:%s%s", ip, hostname, "/1/model.savedmodel/variables/variables.index")
-	filePath = fmt.Sprintf("%s%s", t.baseDir, "/base_model/1/model.savedmodel/variables/variables.index")
+	filePath = fmt.Sprintf("%s%s", modelPath, "/1/model.savedmodel/variables/variables.index")
 	info, err = t.minioClient.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
 		return err
@@ -452,5 +465,60 @@ func (t *training) uploadModel(ip, hostname string) error {
 	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
 
 	logger.Info("upload model success")
+	return nil
+}
+
+// copyFile copies file from source to target.
+func copyFile(source, target string) error {
+	sourceFile, err := os.Open(source)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+
+	targetFile, err := os.Create(target)
+	if err != nil {
+		return err
+	}
+	defer targetFile.Close()
+
+	if _, err = io.Copy(targetFile, sourceFile); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// copyFolder copies file directory from source target.
+func copyFolder(source, target string) error {
+	sourceInfo, err := os.Stat(source)
+	if err != nil {
+		return err
+	}
+
+	if err = os.MkdirAll(target, sourceInfo.Mode()); err != nil {
+		return err
+	}
+
+	entries, err := os.ReadDir(source)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		sourcePath := filepath.Join(source, entry.Name())
+		targetPath := filepath.Join(target, entry.Name())
+
+		if entry.IsDir() {
+			if err = copyFolder(sourcePath, targetPath); err != nil {
+				return err
+			}
+		} else {
+			if err = copyFile(sourcePath, targetPath); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
