@@ -1,4 +1,4 @@
-name: "model1"
+name: "base_model"
 platform: "tensorflow_savedmodel"
 version_policy: { latest { num_versions: 1 }}
 input [
