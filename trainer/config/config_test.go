@@ -86,7 +86,7 @@ func TestConfig_Load(t *testing.T) {
 			Addr: "127.0.0.1:65003",
 		},
 		Minio: MinioConfig{
-			EndPoint: "127.0.0.1:9000",
+			Endpoint: "127.0.0.1:9000",
 		},
 	}
 

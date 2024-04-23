@@ -85,7 +85,8 @@ type training struct {
 // New returns a new Training.
 func New(cfg *config.Config, baseDir string, managerClient managerclient.V1, storage storage.Storage) (Training, error) {
 	// Initialize minio client object.
-	minioClient, err := minio.New(cfg.Minio.EndPoint, &minio.Options{
+	logger.Info(cfg.Minio.Endpoint)
+	minioClient, err := minio.New(cfg.Minio.Endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4("admin", "admin123", ""),
 		Secure: false,
 	})
@@ -423,7 +424,8 @@ func (t *training) saveModel(gm *tf.SavedModel) error {
 // Upload model to minio.
 func (t *training) uploadModel(ip, hostname string) error {
 	ctx := context.Background()
-	bucketName := fmt.Sprintf("%s:%s:%s", ip, hostname, "models")
+	// Bucket name can not be longger than 63 characters.
+	bucketName := "models"
 	exists, err := t.minioClient.BucketExists(ctx, bucketName)
 	if err == nil && !exists {
 		if err := t.minioClient.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{}); err != nil {
@@ -433,7 +435,7 @@ func (t *training) uploadModel(ip, hostname string) error {
 		return err
 	}
 
-	objectName := "base_model/1/model.savedmodel/saved_model.pb"
+	objectName := fmt.Sprintf("%s%s", ip+hostname, "/1/model.savedmodel/saved_model.pb")
 	filePath := fmt.Sprintf("%s%s", t.baseDir, "base_model/1/model.savedmodel/saved_model.pb")
 	info, err := t.minioClient.FPutObject(ctx, bucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
@@ -441,7 +443,7 @@ func (t *training) uploadModel(ip, hostname string) error {
 	}
 	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
 
-	objectName = "base_model/config.pbtxt"
+	objectName = fmt.Sprintf("%s%s", ip+hostname, "/config.pbtxt")
 	filePath = fmt.Sprintf("%s%s", t.baseDir, "base_model/config.pbtxt")
 	info, err = t.minioClient.FPutObject(ctx, bucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
@@ -449,7 +451,7 @@ func (t *training) uploadModel(ip, hostname string) error {
 	}
 	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
 
-	objectName = "base_model/1/model.savedmodel/variables/variables.data-00000-of-00001"
+	objectName = fmt.Sprintf("%s%s", ip+hostname, "/1/model.savedmodel/variables/variables.data-00000-of-00001")
 	filePath = fmt.Sprintf("%s%s", t.baseDir, "base_model/1/model.savedmodel/variables/variables.data-00000-of-00001")
 	info, err = t.minioClient.FPutObject(ctx, bucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
@@ -457,7 +459,7 @@ func (t *training) uploadModel(ip, hostname string) error {
 	}
 	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
 
-	objectName = "base_model/1/model.savedmodel/variables/variables.index"
+	objectName = fmt.Sprintf("%s%s", ip+hostname, "/1/model.savedmodel/variables/variables.index")
 	filePath = fmt.Sprintf("%s%s", t.baseDir, "base_model/1/model.savedmodel/variables/variables.index")
 	info, err = t.minioClient.FPutObject(ctx, bucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
