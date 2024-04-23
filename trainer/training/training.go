@@ -17,22 +17,19 @@
 package training
 
 import (
-	"archive/zip"
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
 	"time"
 
 	tf "github.com/galeone/tensorflow/tensorflow/go"
 	"github.com/gocarina/gocsv"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	managerv1 "d7y.io/api/v2/pkg/apis/manager/v1"
 	logger "d7y.io/dragonfly/v2/internal/dflog"
 	"d7y.io/dragonfly/v2/pkg/idgen"
 	pkgredis "d7y.io/dragonfly/v2/pkg/redis"
@@ -73,6 +70,8 @@ type training struct {
 	// Manager service clent.
 	managerClient managerclient.V1
 
+	minioClient *minio.Client
+
 	// Record Buffer.
 	buffer []Record
 
@@ -85,11 +84,23 @@ type training struct {
 
 // New returns a new Training.
 func New(cfg *config.Config, baseDir string, managerClient managerclient.V1, storage storage.Storage) Training {
+	endpoint := "210.30.96.102:30304"
+
+	// Initialize minio client object.
+	minioClient, err := minio.New(endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4("admin", "admin123", ""),
+		Secure: false,
+	})
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	return &training{
 		config:        cfg,
 		baseDir:       baseDir,
 		storage:       storage,
 		managerClient: managerClient,
+		minioClient:   minioClient,
 		buffer:        make([]Record, 0),
 	}
 }
@@ -256,8 +267,7 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 }
 
 func (t *training) train(records []Record, ip, hostname string) error {
-	logger.Info(t.baseDir)
-	gm, err := tf.LoadSavedModel(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model"), []string{"serve"}, nil)
+	gm, err := tf.LoadSavedModel(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model/1/model.savedmodel/"), []string{"serve"}, nil)
 	if err != nil {
 		return err
 	}
@@ -367,28 +377,11 @@ func (t *training) train(records []Record, ip, hostname string) error {
 			return err
 		}
 
-		// Compress trained model.
-		data, err := compress(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model"))
-		if err != nil {
+		logger.Info("upload Model")
+		if err := t.uploadModel(ip, hostname); err != nil {
 			return err
 		}
 
-		// Upload trained model to manager.
-		if err := t.managerClient.CreateModel(context.Background(), &managerv1.CreateModelRequest{
-			Hostname: hostname,
-			Ip:       ip,
-			Request: &managerv1.CreateModelRequest_CreateGnnRequest{
-				CreateGnnRequest: &managerv1.CreateGNNRequest{
-					Data:      data,
-					Recall:    0,
-					Precision: 0,
-					F1Score:   0,
-				},
-			},
-		}); err != nil {
-			logger.Error("upload model to manager error: %v", err.Error())
-			return err
-		}
 	}
 
 	return nil
@@ -396,18 +389,27 @@ func (t *training) train(records []Record, ip, hostname string) error {
 
 // Save tensorflow model.
 func (t *training) saveModel(gm *tf.SavedModel) error {
-	savedModel, err := os.ReadFile(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model/saved_model.pb"))
+	savedModel, err := os.ReadFile(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model/1/model.savedmodel/saved_model.pb"))
+	if err != nil {
+		return err
+	}
+
+	configpbtxt, err := os.ReadFile(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model/config.pbtxt"))
 	if err != nil {
 		return err
 	}
 
 	os.RemoveAll(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model"))
-	os.MkdirAll(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model/variables"), os.ModePerm)
-	if err := os.WriteFile(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model/saved_model.pb"), savedModel, os.ModePerm); err != nil {
+	os.MkdirAll(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model/1/model.savedmodel/variables"), os.ModePerm)
+	if err := os.WriteFile(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model/1/model.savedmodel/saved_model.pb"), savedModel, os.ModePerm); err != nil {
 		return err
 	}
 
-	fileName, err := tf.NewTensor(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model/variables/variables"))
+	if err := os.WriteFile(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model/config.pbtxt"), configpbtxt, os.ModePerm); err != nil {
+		return err
+	}
+
+	fileName, err := tf.NewTensor(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model/1/model.savedmodel/variables/variables"))
 	if err != nil {
 		return err
 	}
@@ -429,49 +431,8 @@ func (t *training) saveModel(gm *tf.SavedModel) error {
 	return nil
 }
 
-// Compress trained model to byte for uploading.
-func compress(path string) ([]byte, error) {
-	zipBuffer := new(bytes.Buffer)
-	zipWriter := zip.NewWriter(zipBuffer)
-	defer zipWriter.Close()
+// Upload model to minio.
+func (t *training) uploadModel(ip, hostname string) error {
 
-	// Iterate through all the files and subdirectories in the directory and add them to the zip compressor.
-	if err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		header, err := zip.FileInfoHeader(info)
-		if err != nil {
-			return err
-		}
-
-		// Set the zip file header name.
-		header.Name = path
-
-		// If the current file is a directory, add the zip file header directly.
-		if info.IsDir() {
-			_, err = zipWriter.CreateHeader(header)
-			return err
-		}
-
-		// If the current file is a normal file, open it and add its contents to the zip compressor.
-		file, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-
-		entry, err := zipWriter.CreateHeader(header)
-		if err != nil {
-			return err
-		}
-
-		_, err = io.Copy(entry, file)
-		return err
-	}); err != nil {
-		return nil, err
-	}
-
-	return zipBuffer.Bytes(), nil
+	return nil
 }
