@@ -90,9 +90,18 @@ func New(cfg *config.Config, baseDir string, managerClient managerclient.V1, sto
 		return nil, err
 	}
 
-	// upload base model.
-	baseModelPath := fmt.Sprintf("%s/%s", baseDir, "base_model")
-	if err := uploadBaseModel(minioClient, baseModelPath); err != nil {
+	ctx := context.Background()
+	exists, err := minioClient.BucketExists(ctx, BucketName)
+	if err == nil && !exists {
+		if err := minioClient.MakeBucket(ctx, BucketName, minio.MakeBucketOptions{}); err != nil {
+			return nil, err
+		}
+
+		baseModelPath := fmt.Sprintf("%s/%s", baseDir, "base_model")
+		if err := uploadBaseModel(minioClient, baseModelPath); err != nil {
+			return nil, err
+		}
+	} else if err != nil {
 		return nil, err
 	}
 
@@ -108,19 +117,6 @@ func New(cfg *config.Config, baseDir string, managerClient managerclient.V1, sto
 
 // Train begins training GNN and MLP model.
 func (t *training) Train(ctx context.Context, ip, hostname string) error {
-	exists, err := t.minioClient.BucketExists(ctx, BucketName)
-	if err == nil && !exists {
-		if err := t.minioClient.MakeBucket(ctx, BucketName, minio.MakeBucketOptions{}); err != nil {
-			return nil
-		}
-
-		if err := t.uploadModel(ip, hostname); err != nil {
-			return nil
-		}
-	} else if err != nil {
-		return err
-	}
-
 	records, err := t.preprocess(ip, hostname)
 	if err != nil {
 		logger.Error(err)
@@ -205,7 +201,6 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 	}
 
 	// Preprocess graphsage training data.
-	logger.Info("loading graphsage.csv")
 	graphsageFile, err := t.storage.OpenGraphsage(hostID)
 	if err != nil {
 		msg := fmt.Sprintf("open graphsage records failed: %s", err.Error())
