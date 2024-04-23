@@ -436,7 +436,7 @@ func (t *training) saveModel(gm *tf.SavedModel, ip, hostname string) error {
 func uploadBaseModel(minioClient *minio.Client, baseModelPath string) error {
 	ctx := context.Background()
 
-	objectName := fmt.Sprintf("%s%s", baseModelPath, "/1/model.savedmodel/saved_model.pb")
+	objectName := fmt.Sprintf("%s%s", "base_model", "/1/model.savedmodel/saved_model.pb")
 	filePath := fmt.Sprintf("%s%s", baseModelPath, "/1/model.savedmodel/saved_model.pb")
 	info, err := minioClient.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
@@ -444,7 +444,7 @@ func uploadBaseModel(minioClient *minio.Client, baseModelPath string) error {
 	}
 	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
 
-	objectName = fmt.Sprintf("%s%s", baseModelPath, "/config.pbtxt")
+	objectName = fmt.Sprintf("%s%s", "base_model", "/config.pbtxt")
 	filePath = fmt.Sprintf("%s%s", baseModelPath, "/config.pbtxt")
 	info, err = minioClient.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
@@ -452,7 +452,7 @@ func uploadBaseModel(minioClient *minio.Client, baseModelPath string) error {
 	}
 	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
 
-	objectName = fmt.Sprintf("%s%s", baseModelPath, "/1/model.savedmodel/variables/variables.data-00000-of-00001")
+	objectName = fmt.Sprintf("%s%s", "base_model", "/1/model.savedmodel/variables/variables.data-00000-of-00001")
 	filePath = fmt.Sprintf("%s%s", baseModelPath, "/1/model.savedmodel/variables/variables.data-00000-of-00001")
 	info, err = minioClient.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
@@ -460,7 +460,7 @@ func uploadBaseModel(minioClient *minio.Client, baseModelPath string) error {
 	}
 	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
 
-	objectName = fmt.Sprintf("%s%s", baseModelPath, "/1/model.savedmodel/variables/variables.index")
+	objectName = fmt.Sprintf("%s%s", "base_model", "/1/model.savedmodel/variables/variables.index")
 	filePath = fmt.Sprintf("%s%s", baseModelPath, "/1/model.savedmodel/variables/variables.index")
 	info, err = minioClient.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
