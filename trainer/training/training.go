@@ -94,14 +94,17 @@ func New(cfg *config.Config, baseDir string, managerClient managerclient.V1, sto
 	exists, err := minioClient.BucketExists(ctx, BucketName)
 	if err == nil && !exists {
 		if err := minioClient.MakeBucket(ctx, BucketName, minio.MakeBucketOptions{}); err != nil {
+			logger.Info(err)
 			return nil, err
 		}
 
 		baseModelPath := fmt.Sprintf("%s/%s", baseDir, "base_model")
 		if err := uploadBaseModel(minioClient, baseModelPath); err != nil {
+			logger.Info(err)
 			return nil, err
 		}
 	} else if err != nil {
+		logger.Info(err)
 		return nil, err
 	}
 
@@ -112,7 +115,7 @@ func New(cfg *config.Config, baseDir string, managerClient managerclient.V1, sto
 		managerClient: managerClient,
 		minioClient:   minioClient,
 		buffer:        make([]Record, 0),
-	}, err
+	}, nil
 }
 
 // Train begins training GNN and MLP model.
@@ -201,6 +204,7 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 	}
 
 	// Preprocess graphsage training data.
+	logger.Info("loading graphsage.csv")
 	graphsageFile, err := t.storage.OpenGraphsage(hostID)
 	if err != nil {
 		msg := fmt.Sprintf("open graphsage records failed: %s", err.Error())
