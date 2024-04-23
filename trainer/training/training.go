@@ -427,7 +427,7 @@ func (t *training) uploadModel(ip, hostname string) error {
 		return err
 	}
 
-	objectName := fmt.Sprintf("%s%s", ip+hostname, "/1/model.savedmodel/saved_model.pb")
+	objectName := fmt.Sprintf("%s:%s%s", ip, hostname, "/1/model.savedmodel/saved_model.pb")
 	filePath := fmt.Sprintf("%s%s", t.baseDir, "/base_model/1/model.savedmodel/saved_model.pb")
 	info, err := t.minioClient.FPutObject(ctx, bucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
@@ -435,7 +435,7 @@ func (t *training) uploadModel(ip, hostname string) error {
 	}
 	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
 
-	objectName = fmt.Sprintf("%s%s", ip+hostname, "/config.pbtxt")
+	objectName = fmt.Sprintf("%s:%s%s", ip, hostname, "/config.pbtxt")
 	filePath = fmt.Sprintf("%s%s", t.baseDir, "/base_model/config.pbtxt")
 	info, err = t.minioClient.FPutObject(ctx, bucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
@@ -443,7 +443,7 @@ func (t *training) uploadModel(ip, hostname string) error {
 	}
 	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
 
-	objectName = fmt.Sprintf("%s%s", ip+hostname, "/1/model.savedmodel/variables/variables.data-00000-of-00001")
+	objectName = fmt.Sprintf("%s:%s%s", ip, hostname, "/1/model.savedmodel/variables/variables.data-00000-of-00001")
 	filePath = fmt.Sprintf("%s%s", t.baseDir, "/base_model/1/model.savedmodel/variables/variables.data-00000-of-00001")
 	info, err = t.minioClient.FPutObject(ctx, bucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
@@ -451,7 +451,7 @@ func (t *training) uploadModel(ip, hostname string) error {
 	}
 	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
 
-	objectName = fmt.Sprintf("%s%s", ip+hostname, "/1/model.savedmodel/variables/variables.index")
+	objectName = fmt.Sprintf("%s:%s%s", ip, hostname, "/1/model.savedmodel/variables/variables.index")
 	filePath = fmt.Sprintf("%s%s", t.baseDir, "/base_model/1/model.savedmodel/variables/variables.index")
 	info, err = t.minioClient.FPutObject(ctx, bucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
