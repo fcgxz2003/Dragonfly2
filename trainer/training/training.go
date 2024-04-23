@@ -78,7 +78,6 @@ type training struct {
 // New returns a new Training.
 func New(cfg *config.Config, baseDir string, managerClient managerclient.V1, storage storage.Storage) (Training, error) {
 	// Initialize minio client object.
-	logger.Info(cfg.Minio.Endpoint)
 	minioClient, err := minio.New(cfg.Minio.Endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4("admin", "admin123", ""),
 		Secure: false,
@@ -158,7 +157,6 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 		}
 	}()
 	for download := range dc {
-		logger.Info(download.ID)
 		for _, parent := range download.Parents {
 			if parent.ID != "" {
 				// get maxBandwidth locally from pieces.
@@ -181,10 +179,6 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 				}
 			}
 		}
-	}
-
-	for k, v := range bandwidths {
-		logger.Infof("%s:%s", k, v)
 	}
 
 	// Preprocess graphsage training data.

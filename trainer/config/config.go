@@ -236,7 +236,7 @@ func (cfg *Config) Validate() error {
 	}
 
 	if cfg.Train.Epoch <= 0 {
-		return errors.New("train requires parameter ephco")
+		return errors.New("train requires parameter epoch")
 	}
 
 	return nil
