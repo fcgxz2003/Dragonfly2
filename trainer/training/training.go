@@ -363,12 +363,10 @@ func (t *training) train(records []Record, ip, hostname string) error {
 	if t.epoch >= defaultEpoch {
 		t.epoch = 0
 		t.losses = t.losses[:0]
-		logger.Info("save model")
 		if err := t.saveModel(gm); err != nil {
 			return err
 		}
 
-		logger.Info("upload Model")
 		if err := t.uploadModel(ip, hostname); err != nil {
 			return err
 		}
@@ -426,16 +424,13 @@ func (t *training) saveModel(gm *tf.SavedModel) error {
 func (t *training) uploadModel(ip, hostname string) error {
 	ctx := context.Background()
 	bucketName := fmt.Sprintf("%s:%s:%s", ip, hostname, "models")
-	if err := t.minioClient.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{}); err != nil {
-		// Check to see if we already own this bucket
-		exists, err := t.minioClient.BucketExists(ctx, bucketName)
-		if err == nil && !exists {
-			if err := t.minioClient.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{}); err != nil {
-				return nil
-			}
-		} else if err != nil {
+	exists, err := t.minioClient.BucketExists(ctx, bucketName)
+	if err == nil && !exists {
+		if err := t.minioClient.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{}); err != nil {
 			return nil
 		}
+	} else if err != nil {
+		return err
 	}
 
 	objectName := "base_model/1/model.savedmodel/saved_model.pb"
@@ -470,5 +465,6 @@ func (t *training) uploadModel(ip, hostname string) error {
 	}
 	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
 
+	logger.Info("upload model success")
 	return nil
 }
