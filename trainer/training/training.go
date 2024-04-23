@@ -45,6 +45,8 @@ const (
 	defaultAggregationNumber = 3
 
 	defaultIPv4FeatureLength = 32
+
+	BucketName = "models"
 )
 
 // Training defines the interface to train GNN and MLP model.
@@ -98,6 +100,19 @@ func New(cfg *config.Config, baseDir string, managerClient managerclient.V1, sto
 
 // Train begins training GNN and MLP model.
 func (t *training) Train(ctx context.Context, ip, hostname string) error {
+	exists, err := t.minioClient.BucketExists(ctx, BucketName)
+	if err == nil && !exists {
+		if err := t.minioClient.MakeBucket(ctx, BucketName, minio.MakeBucketOptions{}); err != nil {
+			return nil
+		}
+
+		if err := t.uploadModel(ip, hostname); err != nil {
+			return nil
+		}
+	} else if err != nil {
+		return err
+	}
+
 	records, err := t.preprocess(ip, hostname)
 	if err != nil {
 		logger.Error(err)
@@ -404,19 +419,9 @@ func (t *training) saveModel(gm *tf.SavedModel) error {
 func (t *training) uploadModel(ip, hostname string) error {
 	ctx := context.Background()
 	// Bucket name can not be longger than 63 characters.
-	bucketName := "models"
-	exists, err := t.minioClient.BucketExists(ctx, bucketName)
-	if err == nil && !exists {
-		if err := t.minioClient.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{}); err != nil {
-			return nil
-		}
-	} else if err != nil {
-		return err
-	}
-
 	objectName := fmt.Sprintf("%s:%s%s", ip, hostname, "/1/model.savedmodel/saved_model.pb")
 	filePath := fmt.Sprintf("%s%s", t.baseDir, "/base_model/1/model.savedmodel/saved_model.pb")
-	info, err := t.minioClient.FPutObject(ctx, bucketName, objectName, filePath, minio.PutObjectOptions{})
+	info, err := t.minioClient.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
 		return err
 	}
@@ -424,7 +429,7 @@ func (t *training) uploadModel(ip, hostname string) error {
 
 	objectName = fmt.Sprintf("%s:%s%s", ip, hostname, "/config.pbtxt")
 	filePath = fmt.Sprintf("%s%s", t.baseDir, "/base_model/config.pbtxt")
-	info, err = t.minioClient.FPutObject(ctx, bucketName, objectName, filePath, minio.PutObjectOptions{})
+	info, err = t.minioClient.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
 		return err
 	}
@@ -432,7 +437,7 @@ func (t *training) uploadModel(ip, hostname string) error {
 
 	objectName = fmt.Sprintf("%s:%s%s", ip, hostname, "/1/model.savedmodel/variables/variables.data-00000-of-00001")
 	filePath = fmt.Sprintf("%s%s", t.baseDir, "/base_model/1/model.savedmodel/variables/variables.data-00000-of-00001")
-	info, err = t.minioClient.FPutObject(ctx, bucketName, objectName, filePath, minio.PutObjectOptions{})
+	info, err = t.minioClient.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
 		return err
 	}
@@ -440,7 +445,7 @@ func (t *training) uploadModel(ip, hostname string) error {
 
 	objectName = fmt.Sprintf("%s:%s%s", ip, hostname, "/1/model.savedmodel/variables/variables.index")
 	filePath = fmt.Sprintf("%s%s", t.baseDir, "/base_model/1/model.savedmodel/variables/variables.index")
-	info, err = t.minioClient.FPutObject(ctx, bucketName, objectName, filePath, minio.PutObjectOptions{})
+	info, err = t.minioClient.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
 		return err
 	}
