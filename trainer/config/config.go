@@ -46,6 +46,8 @@ type Config struct {
 
 	// Manager configuration.
 	Manager ManagerConfig `yaml:"manager" mapstructure:"manager"`
+
+	Minio MinioConfig `yaml:"minio" mapstructure:"minio"`
 }
 
 type NetworkConfig struct {
@@ -127,6 +129,11 @@ type ManagerConfig struct {
 	Addr string `yaml:"addr" mapstructure:"addr"`
 }
 
+type MinioConfig struct {
+	// EndPoint is minio endpoint.
+	EndPoint string `yaml:"endPoint" mapstructure:"endPoint"`
+}
+
 // New default configuration.
 func New() *Config {
 	return &Config{
@@ -155,6 +162,7 @@ func New() *Config {
 			},
 		},
 		Manager: ManagerConfig{},
+		Minio:   MinioConfig{},
 	}
 }
 
@@ -206,6 +214,10 @@ func (cfg *Config) Validate() error {
 
 	if cfg.Manager.Addr == "" {
 		return errors.New("manager requires parameter addr")
+	}
+
+	if cfg.Minio.EndPoint == "" {
+		return errors.New("minio requires parameter endpoint")
 	}
 
 	return nil

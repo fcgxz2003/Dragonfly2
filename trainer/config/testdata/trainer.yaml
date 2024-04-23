@@ -31,3 +31,6 @@ security:
   
 manager:
   addr: 127.0.0.1:65003
+
+minio:
+  endPoint: 127.0.0.1:1234

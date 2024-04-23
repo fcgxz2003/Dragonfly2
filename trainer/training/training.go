@@ -84,10 +84,8 @@ type training struct {
 
 // New returns a new Training.
 func New(cfg *config.Config, baseDir string, managerClient managerclient.V1, storage storage.Storage) (Training, error) {
-	endpoint := "210.30.96.102:30304"
-
 	// Initialize minio client object.
-	minioClient, err := minio.New(endpoint, &minio.Options{
+	minioClient, err := minio.New(cfg.Minio.EndPoint, &minio.Options{
 		Creds:  credentials.NewStaticV4("admin", "admin123", ""),
 		Secure: false,
 	})
@@ -264,7 +262,7 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 }
 
 func (t *training) train(records []Record, ip, hostname string) error {
-	gm, err := tf.LoadSavedModel(fmt.Sprintf("%s%s", t.baseDir, "/model/base_model/1/model.savedmodel/"), []string{"serve"}, nil)
+	gm, err := tf.LoadSavedModel(fmt.Sprintf("%s%s", t.baseDir, "/base_model/1/model.savedmodel/"), []string{"serve"}, nil)
 	if err != nil {
 		return err
 	}

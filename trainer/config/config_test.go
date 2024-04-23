@@ -85,6 +85,9 @@ func TestConfig_Load(t *testing.T) {
 		Manager: ManagerConfig{
 			Addr: "127.0.0.1:65003",
 		},
+		Minio: MinioConfig{
+			EndPoint: "127.0.0.1:1234",
+		},
 	}
 
 	trainerConfigYAML := &Config{}
