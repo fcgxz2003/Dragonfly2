@@ -90,6 +90,12 @@ func New(cfg *config.Config, baseDir string, managerClient managerclient.V1, sto
 		return nil, err
 	}
 
+	// upload base model.
+	baseModelPath := fmt.Sprintf("%s/%s", baseDir, "base_model")
+	if err := uploadBaseModel(minioClient, baseModelPath); err != nil {
+		return nil, err
+	}
+
 	return &training{
 		config:        cfg,
 		baseDir:       baseDir,
@@ -424,6 +430,46 @@ func (t *training) saveModel(gm *tf.SavedModel, ip, hostname string) error {
 	}
 
 	logger.Info("save model success")
+	return nil
+}
+
+// Upload base model to minio.
+func uploadBaseModel(minioClient *minio.Client, baseModelPath string) error {
+	ctx := context.Background()
+
+	objectName := fmt.Sprintf("%s%s", baseModelPath, "/1/model.savedmodel/saved_model.pb")
+	filePath := fmt.Sprintf("%s%s", baseModelPath, "/1/model.savedmodel/saved_model.pb")
+	info, err := minioClient.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{})
+	if err != nil {
+		return err
+	}
+	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
+
+	objectName = fmt.Sprintf("%s%s", baseModelPath, "/config.pbtxt")
+	filePath = fmt.Sprintf("%s%s", baseModelPath, "/config.pbtxt")
+	info, err = minioClient.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{})
+	if err != nil {
+		return err
+	}
+	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
+
+	objectName = fmt.Sprintf("%s%s", baseModelPath, "/1/model.savedmodel/variables/variables.data-00000-of-00001")
+	filePath = fmt.Sprintf("%s%s", baseModelPath, "/1/model.savedmodel/variables/variables.data-00000-of-00001")
+	info, err = minioClient.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{})
+	if err != nil {
+		return err
+	}
+	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
+
+	objectName = fmt.Sprintf("%s%s", baseModelPath, "/1/model.savedmodel/variables/variables.index")
+	filePath = fmt.Sprintf("%s%s", baseModelPath, "/1/model.savedmodel/variables/variables.index")
+	info, err = minioClient.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{})
+	if err != nil {
+		return err
+	}
+	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
+
+	logger.Info("upload base model success")
 	return nil
 }
 
