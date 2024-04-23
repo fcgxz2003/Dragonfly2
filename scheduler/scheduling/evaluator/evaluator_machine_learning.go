@@ -21,17 +21,17 @@ import (
 	"encoding/binary"
 	"errors"
 	"math"
-	"math/big"
 	"math/rand"
 	"net"
 	"sort"
+	"strings"
 	"unsafe"
-
-	"github.com/montanaflynn/stats"
 
 	triton "d7y.io/api/v2/pkg/apis/inference"
 	logger "d7y.io/dragonfly/v2/internal/dflog"
+	mathmatics "d7y.io/dragonfly/v2/pkg/math"
 	inferenceclient "d7y.io/dragonfly/v2/pkg/rpc/inference/client"
+	"d7y.io/dragonfly/v2/pkg/types"
 	"d7y.io/dragonfly/v2/scheduler/networktopology"
 	"d7y.io/dragonfly/v2/scheduler/resource"
 	"d7y.io/dragonfly/v2/scheduler/storage"
@@ -97,7 +97,15 @@ func newEvaluatorMachineLearning(options ...MachineLearningOption) Evaluator {
 
 // EvaluateParents sort parents by evaluating multiple feature scores.
 func (e *evaluatorMachineLearning) EvaluateParents(parents []*resource.Peer, child *resource.Peer, totalPieceCount int32) []*resource.Peer {
-	scores := e.evaluate(parents, child, totalPieceCount)
+	var scores = make([]float64, len(parents))
+	scores, err := e.evaluate(parents, child)
+	if err != nil {
+		logger.Infof("machine learining algorithm error:", err)
+		logger.Info("using base algorithm")
+		scores = e.evaluateBase(parents, child, totalPieceCount)
+	}
+
+	logger.Info("using machine learining algorithm")
 	sort.Slice(
 		parents,
 		func(i, j int) bool {
@@ -109,54 +117,139 @@ func (e *evaluatorMachineLearning) EvaluateParents(parents []*resource.Peer, chi
 }
 
 // The larger the value, the higher the priority.
-func (e *evaluatorMachineLearning) evaluate(parents []*resource.Peer, child *resource.Peer, totalPieceCount int32) []float64 {
+func (e *evaluatorMachineLearning) evaluate(parents []*resource.Peer, child *resource.Peer) ([]float64, error) {
 	scores, err := e.inference(parents, child)
 	if err != nil {
-		logger.Errorf("machine learining algorithm error:", err)
-		scores := make([]float64, len(parents))
-		return scores
+		return nil, err
 	}
 
-	logger.Info("using machine learining algorithm")
+	return scores, nil
+}
+
+// The larger the value, the higher the priority.
+func (e *evaluatorMachineLearning) evaluateBase(parents []*resource.Peer, child *resource.Peer, totalPieceCount int32) []float64 {
+	scores := make([]float64, len(parents))
+	childLocation := child.Host.Network.Location
+	childIDC := child.Host.Network.IDC
+
+	for i, parent := range parents {
+		parentLocation := parent.Host.Network.Location
+		parentIDC := parent.Host.Network.IDC
+
+		scores[i] = finishedPieceWeight*e.calculatePieceScore(parent, child, totalPieceCount) +
+			parentHostUploadSuccessWeight*e.calculateParentHostUploadSuccessScore(parent) +
+			freeUploadWeight*e.calculateFreeUploadScore(parent.Host) +
+			hostTypeWeight*e.calculateHostTypeScore(parent) +
+			idcAffinityWeight*e.calculateIDCAffinityScore(parentIDC, childIDC) +
+			locationAffinityWeight*e.calculateMultiElementAffinityScore(parentLocation, childLocation)
+	}
+
 	return scores
 }
 
-func (e *evaluatorMachineLearning) IsBadNode(peer *resource.Peer) bool {
-	if peer.FSM.Is(resource.PeerStateFailed) || peer.FSM.Is(resource.PeerStateLeave) || peer.FSM.Is(resource.PeerStatePending) ||
-		peer.FSM.Is(resource.PeerStateReceivedTiny) || peer.FSM.Is(resource.PeerStateReceivedSmall) ||
-		peer.FSM.Is(resource.PeerStateReceivedNormal) || peer.FSM.Is(resource.PeerStateReceivedEmpty) {
-		peer.Log.Debugf("peer is bad node because peer status is %s", peer.FSM.Current())
-		return true
+// calculatePieceScore 0.0~unlimited larger and better.
+func (e *evaluatorMachineLearning) calculatePieceScore(parent *resource.Peer, child *resource.Peer, totalPieceCount int32) float64 {
+	// If the total piece is determined, normalize the number of
+	// pieces downloaded by the parent node.
+	if totalPieceCount > 0 {
+		finishedPieceCount := parent.FinishedPieces.Count()
+		return float64(finishedPieceCount) / float64(totalPieceCount)
 	}
 
-	// Determine whether to bad node based on piece download costs.
-	costs := stats.LoadRawData(peer.PieceCosts())
-	len := len(costs)
-	// Peer has not finished downloading enough piece.
-	if len < minAvailableCostLen {
-		logger.Debugf("peer %s has not finished downloading enough piece, it can't be bad node", peer.ID)
-		return false
+	// Use the difference between the parent node and the child node to
+	// download the piece to roughly represent the piece score.
+	parentFinishedPieceCount := parent.FinishedPieces.Count()
+	childFinishedPieceCount := child.FinishedPieces.Count()
+	return float64(parentFinishedPieceCount) - float64(childFinishedPieceCount)
+}
+
+// calculateParentHostUploadSuccessScore 0.0~unlimited larger and better.
+func (e *evaluatorMachineLearning) calculateParentHostUploadSuccessScore(peer *resource.Peer) float64 {
+	uploadCount := peer.Host.UploadCount.Load()
+	uploadFailedCount := peer.Host.UploadFailedCount.Load()
+	if uploadCount < uploadFailedCount {
+		return minScore
 	}
 
-	lastCost := costs[len-1]
-	mean, _ := stats.Mean(costs[:len-1]) // nolint: errcheck
-
-	// Download costs does not meet the normal distribution,
-	// if the last cost is twenty times more than mean, it is bad node.
-	if len < normalDistributionLen {
-		isBadNode := big.NewFloat(lastCost).Cmp(big.NewFloat(mean*20)) > 0
-		logger.Debugf("peer %s mean is %.2f and it is bad node: %t", peer.ID, mean, isBadNode)
-		return isBadNode
+	// Host has not been scheduled, then it is scheduled first.
+	if uploadCount == 0 && uploadFailedCount == 0 {
+		return maxScore
 	}
 
-	// Download costs satisfies the normal distribution,
-	// last cost falling outside of three-sigma effect need to be adjusted parent,
-	// refer to https://en.wikipedia.org/wiki/68%E2%80%9395%E2%80%9399.7_rule.
-	stdev, _ := stats.StandardDeviation(costs[:len-1]) // nolint: errcheck
-	isBadNode := big.NewFloat(lastCost).Cmp(big.NewFloat(mean+3*stdev)) > 0
-	logger.Debugf("peer %s meet the normal distribution, costs mean is %.2f and standard deviation is %.2f, peer is bad node: %t",
-		peer.ID, mean, stdev, isBadNode)
-	return isBadNode
+	return float64(uploadCount-uploadFailedCount) / float64(uploadCount)
+}
+
+// calculateFreeUploadScore 0.0~1.0 larger and better.
+func (e *evaluatorMachineLearning) calculateFreeUploadScore(host *resource.Host) float64 {
+	ConcurrentUploadLimit := host.ConcurrentUploadLimit.Load()
+	freeUploadCount := host.FreeUploadCount()
+	if ConcurrentUploadLimit > 0 && freeUploadCount > 0 {
+		return float64(freeUploadCount) / float64(ConcurrentUploadLimit)
+	}
+
+	return minScore
+}
+
+// calculateHostTypeScore 0.0~1.0 larger and better.
+func (e *evaluatorMachineLearning) calculateHostTypeScore(peer *resource.Peer) float64 {
+	// When the task is downloaded for the first time,
+	// peer will be scheduled to seed peer first,
+	// otherwise it will be scheduled to dfdaemon first.
+	if peer.Host.Type != types.HostTypeNormal {
+		if peer.FSM.Is(resource.PeerStateReceivedNormal) ||
+			peer.FSM.Is(resource.PeerStateRunning) {
+			return maxScore
+		}
+
+		return minScore
+	}
+
+	return maxScore * 0.5
+}
+
+// calculateIDCAffinityScore 0.0~1.0 larger and better.
+func (e *evaluatorMachineLearning) calculateIDCAffinityScore(dst, src string) float64 {
+	if dst == "" || src == "" {
+		return minScore
+	}
+
+	if strings.EqualFold(dst, src) {
+		return maxScore
+	}
+
+	return minScore
+}
+
+// calculateMultiElementAffinityScore 0.0~1.0 larger and better.
+func (e *evaluatorMachineLearning) calculateMultiElementAffinityScore(dst, src string) float64 {
+	if dst == "" || src == "" {
+		return minScore
+	}
+
+	if strings.EqualFold(dst, src) {
+		return maxScore
+	}
+
+	// Calculate the number of multi-element matches divided by "|".
+	var score, elementLen int
+	dstElements := strings.Split(dst, types.AffinitySeparator)
+	srcElements := strings.Split(src, types.AffinitySeparator)
+	elementLen = mathmatics.Min(len(dstElements), len(srcElements))
+
+	// Maximum element length is 5.
+	if elementLen > maxElementLen {
+		elementLen = maxElementLen
+	}
+
+	for i := 0; i < elementLen; i++ {
+		if !strings.EqualFold(dstElements[i], srcElements[i]) {
+			break
+		}
+
+		score++
+	}
+
+	return float64(score) / float64(maxElementLen)
 }
 
 func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *resource.Peer) ([]float64, error) {
