@@ -418,7 +418,7 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 	}
 
 	inferRequest := triton.ModelInferRequest{
-		ModelName:    "model",
+		ModelName:    "base_model",
 		ModelVersion: "1",
 		Inputs:       inferInputs,
 		Outputs:      inferOutputs,
