@@ -47,6 +47,7 @@ COPY --from=builder /usr/local/lib /usr/local/lib
 COPY --from=health /bin/grpc_health_probe /bin/grpc_health_probe
 COPY --from=health /var/lib/apt/lists /var/lib/apt/lists
 COPY ../trainer/training/base_model /var/lib/dragonfly/base_model
+COPY ../trainer/training/config /var/lib/dragonfly/config
 
 RUN ldconfig /usr/local/lib
 
