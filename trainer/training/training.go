@@ -238,6 +238,10 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 		}
 	}
 
+	for k, v := range bandwidths {
+		logger.Info("%s:%s", k, v)
+	}
+
 	// Preprocess graphsage training data.
 	logger.Info("loading graphsage.csv")
 	graphsageFile, err := t.storage.OpenGraphsage(hostID)
@@ -302,6 +306,10 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 
 			records = append(records, record)
 		}
+	}
+
+	for _, record := range records {
+		logger.Info(record)
 	}
 
 	return records, nil
