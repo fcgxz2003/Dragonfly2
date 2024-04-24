@@ -17,13 +17,10 @@
 package training
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
 	"time"
 
 	tf "github.com/galeone/tensorflow/tensorflow/go"
@@ -103,22 +100,6 @@ func New(cfg *config.Config, baseDir string, managerClient managerclient.V1, sto
 
 // Train begins training GNN and MLP model.
 func (t *training) Train(ctx context.Context, ip, hostname string) error {
-	logger.Infof("receive data from scheduler ip:%s, hostname:%s", ip, hostname)
-	var hostID = idgen.HostIDV2(ip, hostname)
-	modelPath := fmt.Sprintf("%s/%s", t.baseDir, hostID)
-	if _, err := os.Stat(modelPath); os.IsNotExist(err) {
-		// Copy base model to this scheduler model.
-		baseModelPath := fmt.Sprintf("%s/%s", t.baseDir, "base_model")
-		if err := copyFolder(baseModelPath, modelPath); err != nil {
-			return err
-		}
-
-		// Update config.pbtxt for special scheduler.
-		if err := t.updateConfig(hostID); err != nil {
-			return err
-		}
-	}
-
 	exists, err := t.minioClient.BucketExists(ctx, BucketName)
 	if err == nil && !exists {
 		if err := t.minioClient.MakeBucket(ctx, BucketName, minio.MakeBucketOptions{}); err != nil {
@@ -126,14 +107,14 @@ func (t *training) Train(ctx context.Context, ip, hostname string) error {
 			return err
 		}
 
-		if err := t.uploadModel(hostID); err != nil {
+		if err := t.uploadModel("base_model"); err != nil {
 			logger.Info(err)
 			return err
 		}
 	} else if exists {
 		// whether base_model exist.
 		objectCh := t.minioClient.ListObjects(context.Background(), BucketName, minio.ListObjectsOptions{
-			Prefix:    hostID,
+			Prefix:    "base_model",
 			Recursive: true,
 		})
 
@@ -147,7 +128,7 @@ func (t *training) Train(ctx context.Context, ip, hostname string) error {
 		}
 
 		if !flag {
-			if err := t.uploadModel(hostID); err != nil {
+			if err := t.uploadModel("base_model"); err != nil {
 				logger.Info(err)
 				return err
 			}
@@ -173,13 +154,14 @@ func (t *training) Train(ctx context.Context, ip, hostname string) error {
 
 		trainData := t.buffer[:batchsize]
 		t.buffer = t.buffer[batchsize:]
-		if err := t.train(trainData, hostID); err != nil {
+		if err := t.train(trainData, "base_model"); err != nil {
 			logger.Info(err)
 			continue
 		}
 
 	}
 
+	var hostID = idgen.HostIDV2(ip, hostname)
 	// Clean up download data.
 	if err := t.storage.ClearDownload(hostID); err != nil {
 		logger.Error(err)
@@ -505,94 +487,5 @@ func (t *training) uploadModel(hostID string) error {
 	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
 
 	logger.Info("upload model success")
-	return nil
-}
-
-// update config.pbtxt for special scheduler.
-func (t *training) updateConfig(hostID string) error {
-	baseConfigpbtxt := fmt.Sprintf("%s/%s", t.baseDir, "config/config.pbtxt")
-	source, err := os.Open(baseConfigpbtxt)
-	if err != nil {
-		return err
-	}
-	defer source.Close()
-
-	modelPath := fmt.Sprintf("%s/%s", t.baseDir, hostID)
-	configpbtxt := fmt.Sprintf("%s%s", modelPath, "/config.pbtxt")
-	newFile, err := os.Create(configpbtxt)
-	if err != nil {
-		return err
-	}
-	defer newFile.Close()
-
-	modelName := fmt.Sprintf("name: \"%s\"\n", hostID)
-	_, err = newFile.WriteString(modelName)
-	if err != nil {
-		return err
-	}
-
-	scanner := bufio.NewScanner(source)
-	for scanner.Scan() {
-		_, err := newFile.WriteString(scanner.Text() + "\n")
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// copyFile copies file from source to target.
-func copyFile(source, target string) error {
-	sourceFile, err := os.Open(source)
-	if err != nil {
-		return err
-	}
-	defer sourceFile.Close()
-
-	targetFile, err := os.Create(target)
-	if err != nil {
-		return err
-	}
-	defer targetFile.Close()
-
-	if _, err = io.Copy(targetFile, sourceFile); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// copyFolder copies file directory from source target.
-func copyFolder(source, target string) error {
-	sourceInfo, err := os.Stat(source)
-	if err != nil {
-		return err
-	}
-
-	if err = os.MkdirAll(target, sourceInfo.Mode()); err != nil {
-		return err
-	}
-
-	entries, err := os.ReadDir(source)
-	if err != nil {
-		return err
-	}
-
-	for _, entry := range entries {
-		sourcePath := filepath.Join(source, entry.Name())
-		targetPath := filepath.Join(target, entry.Name())
-
-		if entry.IsDir() {
-			if err = copyFolder(sourcePath, targetPath); err != nil {
-				return err
-			}
-		} else {
-			if err = copyFile(sourcePath, targetPath); err != nil {
-				return err
-			}
-		}
-	}
-
 	return nil
 }

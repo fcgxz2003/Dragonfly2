@@ -29,7 +29,6 @@ import (
 
 	triton "d7y.io/api/v2/pkg/apis/inference"
 	logger "d7y.io/dragonfly/v2/internal/dflog"
-	"d7y.io/dragonfly/v2/pkg/idgen"
 	mathmatics "d7y.io/dragonfly/v2/pkg/math"
 	inferenceclient "d7y.io/dragonfly/v2/pkg/rpc/inference/client"
 	"d7y.io/dragonfly/v2/pkg/types"
@@ -418,9 +417,8 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 		},
 	}
 
-	var hostID = idgen.HostIDV2(e.config.Server.AdvertiseIP.String(), e.config.Server.Host)
 	inferRequest := triton.ModelInferRequest{
-		ModelName:    hostID,
+		ModelName:    "model",
 		ModelVersion: "1",
 		Inputs:       inferInputs,
 		Outputs:      inferOutputs,
