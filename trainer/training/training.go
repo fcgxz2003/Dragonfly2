@@ -103,6 +103,21 @@ func New(cfg *config.Config, baseDir string, managerClient managerclient.V1, sto
 
 // Train begins training GNN and MLP model.
 func (t *training) Train(ctx context.Context, ip, hostname string) error {
+	var hostID = idgen.HostIDV2(ip, hostname)
+	modelPath := fmt.Sprintf("%s/%s", t.baseDir, hostID)
+	if _, err := os.Stat(modelPath); os.IsNotExist(err) {
+		// Copy base model to this scheduler model.
+		baseModelPath := fmt.Sprintf("%s/%s", t.baseDir, "base_model")
+		if err := copyFolder(baseModelPath, modelPath); err != nil {
+			return err
+		}
+
+		// Update config.pbtxt for special scheduler.
+		if err := t.updateConfig(hostID); err != nil {
+			return err
+		}
+	}
+
 	exists, err := t.minioClient.BucketExists(ctx, BucketName)
 	if err == nil && !exists {
 		if err := t.minioClient.MakeBucket(ctx, BucketName, minio.MakeBucketOptions{}); err != nil {
@@ -110,14 +125,14 @@ func (t *training) Train(ctx context.Context, ip, hostname string) error {
 			return err
 		}
 
-		if err := t.uploadBaseModel(); err != nil {
+		if err := t.uploadModel(hostID); err != nil {
 			logger.Info(err)
 			return err
 		}
 	} else if exists {
 		// whether base_model exist.
 		objectCh := t.minioClient.ListObjects(context.Background(), BucketName, minio.ListObjectsOptions{
-			Prefix:    "base_model",
+			Prefix:    hostID,
 			Recursive: true,
 		})
 
@@ -131,7 +146,7 @@ func (t *training) Train(ctx context.Context, ip, hostname string) error {
 		}
 
 		if !flag {
-			if err := t.uploadBaseModel(); err != nil {
+			if err := t.uploadModel(hostID); err != nil {
 				logger.Info(err)
 				return err
 			}
@@ -157,14 +172,12 @@ func (t *training) Train(ctx context.Context, ip, hostname string) error {
 
 		trainData := t.buffer[:batchsize]
 		t.buffer = t.buffer[batchsize:]
-		if err := t.train(trainData, ip, hostname); err != nil {
+		if err := t.train(trainData, hostID); err != nil {
 			logger.Info(err)
 			continue
 		}
 
 	}
-
-	var hostID = idgen.HostIDV2(ip, hostname)
 
 	// Clean up download data.
 	if err := t.storage.ClearDownload(hostID); err != nil {
@@ -293,21 +306,8 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 	return records, nil
 }
 
-func (t *training) train(records []Record, ip, hostname string) error {
-	modelPath := fmt.Sprintf("%s/%s:%s", t.baseDir, ip, hostname)
-	if _, err := os.Stat(modelPath); os.IsNotExist(err) {
-		// Copy base model to this scheduler model.
-		baseModelPath := fmt.Sprintf("%s/%s", t.baseDir, "base_model")
-		if err := copyFolder(baseModelPath, modelPath); err != nil {
-			return err
-		}
-
-		// Update config.pbtxt for special scheduler.
-		if err := t.updateConfig(ip, hostname); err != nil {
-			return err
-		}
-	}
-
+func (t *training) train(records []Record, hostID string) error {
+	modelPath := fmt.Sprintf("%s/%s", t.baseDir, hostID)
 	gm, err := tf.LoadSavedModel(fmt.Sprintf("%s%s", modelPath, "/1/model.savedmodel/"), []string{"serve"}, nil)
 	if err != nil {
 		return err
@@ -396,7 +396,7 @@ func (t *training) train(records []Record, ip, hostname string) error {
 	}
 
 	logger.Infof("model train loss is: %f", loss)
-	if err := t.saveModel(gm, ip, hostname); err != nil {
+	if err := t.saveModel(gm, hostID); err != nil {
 		return err
 	}
 
@@ -404,7 +404,7 @@ func (t *training) train(records []Record, ip, hostname string) error {
 	// Reach the training rounds, save and upload the model.
 	if t.epoch >= t.config.Train.Epoch {
 		t.epoch = 0
-		if err := t.uploadModel(ip, hostname); err != nil {
+		if err := t.uploadModel(hostID); err != nil {
 			return err
 		}
 
@@ -414,8 +414,8 @@ func (t *training) train(records []Record, ip, hostname string) error {
 }
 
 // Save tensorflow model.
-func (t *training) saveModel(gm *tf.SavedModel, ip, hostname string) error {
-	modelPath := fmt.Sprintf("%s/%s:%s", t.baseDir, ip, hostname)
+func (t *training) saveModel(gm *tf.SavedModel, hostID string) error {
+	modelPath := fmt.Sprintf("%s/%s", t.baseDir, hostID)
 	savedModel, err := os.ReadFile(fmt.Sprintf("%s%s", modelPath, "/1/model.savedmodel/saved_model.pb"))
 	if err != nil {
 		return err
@@ -458,52 +458,12 @@ func (t *training) saveModel(gm *tf.SavedModel, ip, hostname string) error {
 	return nil
 }
 
-// Upload base model to minio.
-func (t *training) uploadBaseModel() error {
-	ctx := context.Background()
-
-	objectName := fmt.Sprintf("%s%s", "base_model", "/1/model.savedmodel/saved_model.pb")
-	filePath := fmt.Sprintf("%s%s", t.baseDir, "/base_model/1/model.savedmodel/saved_model.pb")
-	info, err := t.minioClient.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{})
-	if err != nil {
-		return err
-	}
-	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
-
-	objectName = fmt.Sprintf("%s%s", "base_model", "/config.pbtxt")
-	filePath = fmt.Sprintf("%s%s", t.baseDir, "/base_model/config.pbtxt")
-	info, err = t.minioClient.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{})
-	if err != nil {
-		return err
-	}
-	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
-
-	objectName = fmt.Sprintf("%s%s", "base_model", "/1/model.savedmodel/variables/variables.data-00000-of-00001")
-	filePath = fmt.Sprintf("%s%s", t.baseDir, "/base_model/1/model.savedmodel/variables/variables.data-00000-of-00001")
-	info, err = t.minioClient.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{})
-	if err != nil {
-		return err
-	}
-	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
-
-	objectName = fmt.Sprintf("%s%s", "base_model", "/1/model.savedmodel/variables/variables.index")
-	filePath = fmt.Sprintf("%s%s", t.baseDir, "/base_model/1/model.savedmodel/variables/variables.index")
-	info, err = t.minioClient.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{})
-	if err != nil {
-		return err
-	}
-	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
-
-	logger.Info("upload base model success")
-	return nil
-}
-
 // Upload model to minio.
-func (t *training) uploadModel(ip, hostname string) error {
+func (t *training) uploadModel(hostID string) error {
 	ctx := context.Background()
-	modelPath := fmt.Sprintf("%s/%s:%s", t.baseDir, ip, hostname)
+	modelPath := fmt.Sprintf("%s/%s", t.baseDir, hostID)
 
-	objectName := fmt.Sprintf("%s:%s%s", ip, hostname, "/1/model.savedmodel/saved_model.pb")
+	objectName := fmt.Sprintf("%s%s", hostID, "/1/model.savedmodel/saved_model.pb")
 	filePath := fmt.Sprintf("%s%s", modelPath, "/1/model.savedmodel/saved_model.pb")
 	info, err := t.minioClient.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
@@ -511,7 +471,7 @@ func (t *training) uploadModel(ip, hostname string) error {
 	}
 	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
 
-	objectName = fmt.Sprintf("%s:%s%s", ip, hostname, "/config.pbtxt")
+	objectName = fmt.Sprintf("%s%s", hostID, "/config.pbtxt")
 	filePath = fmt.Sprintf("%s%s", modelPath, "/config.pbtxt")
 	info, err = t.minioClient.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
@@ -519,7 +479,7 @@ func (t *training) uploadModel(ip, hostname string) error {
 	}
 	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
 
-	objectName = fmt.Sprintf("%s:%s%s", ip, hostname, "/1/model.savedmodel/variables/variables.data-00000-of-00001")
+	objectName = fmt.Sprintf("%s%s", hostID, "/1/model.savedmodel/variables/variables.data-00000-of-00001")
 	filePath = fmt.Sprintf("%s%s", modelPath, "/1/model.savedmodel/variables/variables.data-00000-of-00001")
 	info, err = t.minioClient.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
@@ -527,7 +487,7 @@ func (t *training) uploadModel(ip, hostname string) error {
 	}
 	logger.Infof("Successfully uploaded %s of size %d\n", objectName, info.Size)
 
-	objectName = fmt.Sprintf("%s:%s%s", ip, hostname, "/1/model.savedmodel/variables/variables.index")
+	objectName = fmt.Sprintf("%s%s", hostID, "/1/model.savedmodel/variables/variables.index")
 	filePath = fmt.Sprintf("%s%s", modelPath, "/1/model.savedmodel/variables/variables.index")
 	info, err = t.minioClient.FPutObject(ctx, BucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
@@ -540,7 +500,7 @@ func (t *training) uploadModel(ip, hostname string) error {
 }
 
 // update config.pbtxt for special scheduler.
-func (t *training) updateConfig(ip, hostname string) error {
+func (t *training) updateConfig(hostID string) error {
 	baseConfigpbtxt := fmt.Sprintf("%s/%s", t.baseDir, "config/config.pbtxt")
 	source, err := os.Open(baseConfigpbtxt)
 	if err != nil {
@@ -548,7 +508,7 @@ func (t *training) updateConfig(ip, hostname string) error {
 	}
 	defer source.Close()
 
-	modelPath := fmt.Sprintf("%s/%s:%s", t.baseDir, ip, hostname)
+	modelPath := fmt.Sprintf("%s/%s", t.baseDir, hostID)
 	configpbtxt := fmt.Sprintf("%s%s", modelPath, "/config.pbtxt")
 	newFile, err := os.Create(configpbtxt)
 	if err != nil {
@@ -556,7 +516,7 @@ func (t *training) updateConfig(ip, hostname string) error {
 	}
 	defer newFile.Close()
 
-	modelName := fmt.Sprintf("name: \"%s:%s\"\n", ip, hostname)
+	modelName := fmt.Sprintf("name: \"%s\"\n", hostID)
 	_, err = newFile.WriteString(modelName)
 	if err != nil {
 		return err
