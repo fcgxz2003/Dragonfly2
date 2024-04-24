@@ -103,6 +103,7 @@ func New(cfg *config.Config, baseDir string, managerClient managerclient.V1, sto
 
 // Train begins training GNN and MLP model.
 func (t *training) Train(ctx context.Context, ip, hostname string) error {
+	logger.Infof("receive data from scheduler ip:%s, hostname:%s", ip, hostname)
 	var hostID = idgen.HostIDV2(ip, hostname)
 	modelPath := fmt.Sprintf("%s/%s", t.baseDir, hostID)
 	if _, err := os.Stat(modelPath); os.IsNotExist(err) {
