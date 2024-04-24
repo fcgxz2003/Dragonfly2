@@ -160,11 +160,13 @@ func (v *V1) Train(stream trainerv1.Trainer_TrainServer) error {
 	}
 
 	// If all dataset received, start training.
-	go func() {
-		if err := v.training.Train(context.Background(), ip, hostname); err != nil {
-			logger.Errorf("train failed: %s", err.Error())
-		}
-	}()
+	if req != nil {
+		go func() {
+			if err := v.training.Train(context.Background(), ip, hostname); err != nil {
+				logger.Errorf("train failed: %s", err.Error())
+			}
+		}()
+	}
 
 	return nil
 }
