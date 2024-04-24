@@ -106,13 +106,38 @@ func (t *training) Train(ctx context.Context, ip, hostname string) error {
 	exists, err := t.minioClient.BucketExists(ctx, BucketName)
 	if err == nil && !exists {
 		if err := t.minioClient.MakeBucket(ctx, BucketName, minio.MakeBucketOptions{}); err != nil {
+			logger.Info(err)
 			return err
 		}
 
 		if err := t.uploadBaseModel(); err != nil {
+			logger.Info(err)
 			return err
 		}
-	} else if err != nil {
+	} else if exists {
+		// whether base_model exist.
+		objectCh := t.minioClient.ListObjects(context.Background(), BucketName, minio.ListObjectsOptions{
+			Prefix:    "base_model",
+			Recursive: true,
+		})
+
+		var flag = false
+		for object := range objectCh {
+			if object.Err != nil {
+				continue
+			}
+
+			flag = true
+		}
+
+		if !flag {
+			if err := t.uploadBaseModel(); err != nil {
+				logger.Info(err)
+				return err
+			}
+		}
+	} else {
+		logger.Info(err)
 		return err
 	}
 
