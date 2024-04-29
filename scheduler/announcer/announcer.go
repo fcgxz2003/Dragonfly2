@@ -169,13 +169,13 @@ func (a *announcer) train() error {
 		return err
 	}
 
-	// if err := a.storage.ClearDownloadContent(); err != nil {
-	// 	return err
-	// }
+	if err := a.storage.ClearDownloadContent(); err != nil {
+		return err
+	}
 
-	// if err := a.storage.ClearGraphsageContent(); err != nil {
-	// 	return err
-	// }
+	if err := a.storage.ClearGraphsageContent(); err != nil {
+		return err
+	}
 
 	return nil
 }
