@@ -201,7 +201,7 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 				// get maxBandwidth locally from pieces.
 				var localMaxBandwidth float32
 				for _, piece := range parent.Pieces {
-					bandwidth := float32(float64(piece.Length) / 1024 / 1024 / time.Duration(piece.Cost).Seconds())
+					bandwidth := float32(float64(piece.Length) / 1024 / time.Duration(piece.Cost).Seconds())
 					if piece.Cost > 0 && bandwidth > localMaxBandwidth {
 						localMaxBandwidth = bandwidth
 					}
