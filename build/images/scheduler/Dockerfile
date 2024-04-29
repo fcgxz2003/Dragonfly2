@@ -34,7 +34,6 @@ RUN echo "hosts: files dns" > /etc/nsswitch.conf
 
 COPY --from=builder /opt/dragonfly/bin/scheduler /opt/dragonfly/bin/scheduler
 COPY --from=health /bin/grpc_health_probe /bin/grpc_health_probe
-COPY --from=health /var/lib/apt/lists /var/lib/apt/lists
 
 EXPOSE 8002
 
