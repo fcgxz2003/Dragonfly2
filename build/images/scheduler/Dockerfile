@@ -18,9 +18,6 @@ FROM ${BASE_IMAGE} as health
 
 ENV GRPC_HEALTH_PROBE_VERSION v0.4.24
 
-RUN apt-get update \
-    && apt-get install -y wget
-
 RUN if [ "$(uname -m)" = "ppc64le" ]; then \
     wget -qO/bin/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-linux-ppc64le; \
     elif [ "$(uname -m)" = "aarch64" ]; then \
@@ -38,13 +35,6 @@ RUN echo "hosts: files dns" > /etc/nsswitch.conf
 COPY --from=builder /opt/dragonfly/bin/scheduler /opt/dragonfly/bin/scheduler
 COPY --from=health /bin/grpc_health_probe /bin/grpc_health_probe
 COPY --from=health /var/lib/apt/lists /var/lib/apt/lists
-
-RUN apt-get install -y vim bash-completion \
-    && rm /bin/sh \
-    && ln -s /bin/bash /bin/sh \
-    && rm -rf /var/lib/apt/lists/* \
-    && echo 'PS1="\[\e[1;32m\]\u@\h \[\e[1;34m\]\w\[\e[0m\]\$ "' >> ~/.bashrc \
-    && . ~/.bashrc
 
 EXPOSE 8002
 
