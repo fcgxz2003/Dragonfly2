@@ -46,6 +46,9 @@ const (
 	// GraphsageFilePrefix is prefix of graphsage file name.
 	GraphsageFilePrefix = "graphsage"
 
+	// CostPrefix is prefix of cost file name.
+	CostPrefix = "cost"
+
 	// CSVFileExt is extension of file name.
 	CSVFileExt = "csv"
 )
@@ -63,6 +66,8 @@ type Storage interface {
 	// CreateDownload inserts the download into csv file.
 	CreateDownload(Download) error
 
+	CreateCost(Cost) error
+
 	// CreateNetworkTopology inserts the network topology into csv file.
 	CreateNetworkTopology(NetworkTopology) error
 
@@ -71,6 +76,8 @@ type Storage interface {
 
 	// ListDownload returns all downloads in csv file.
 	ListDownload() ([]Download, error)
+
+	ListCost() ([]Cost, error)
 
 	// ListNetworkTopology returns all network topologies in csv file.
 	ListNetworkTopology() ([]NetworkTopology, error)
@@ -81,6 +88,8 @@ type Storage interface {
 	// DownloadCount returns the count of downloads.
 	DownloadCount() int64
 
+	CostCount() int64
+
 	// NetworkTopologyCount returns the count of network topologies.
 	NetworkTopologyCount() int64
 
@@ -90,6 +99,8 @@ type Storage interface {
 	// OpenDownload opens download files for read, it returns io.ReadCloser of download files.
 	OpenDownload() (io.ReadCloser, error)
 
+	OpenCost() (io.ReadCloser, error)
+
 	// OpenNetworkTopology opens network topology files for read, it returns io.ReadCloser of network topology files.
 	OpenNetworkTopology() (io.ReadCloser, error)
 
@@ -98,6 +109,8 @@ type Storage interface {
 
 	// ClearDownload removes all download files.
 	ClearDownload() error
+
+	ClearCost() error
 
 	ClearDownloadContent() error
 
@@ -131,6 +144,11 @@ type storage struct {
 	graphsageFilename string
 	graphsageBuffer   []Graphsage
 	graphsageCount    int64
+
+	costMu       *sync.RWMutex
+	costFilename string
+	costBuffer   []Cost
+	costCount    int64
 }
 
 // New returns a new Storage instance.
@@ -152,6 +170,10 @@ func New(baseDir string, maxSize, maxBackups, bufferSize int) (Storage, error) {
 		graphsageMu:       &sync.RWMutex{},
 		graphsageFilename: filepath.Join(baseDir, fmt.Sprintf("%s.%s", GraphsageFilePrefix, CSVFileExt)),
 		graphsageBuffer:   make([]Graphsage, 0, bufferSize),
+
+		costMu:       &sync.RWMutex{},
+		costFilename: filepath.Join(baseDir, fmt.Sprintf("%s.%s", CostPrefix, CSVFileExt)),
+		costBuffer:   make([]Cost, 0, bufferSize),
 	}
 
 	downloadFile, err := os.OpenFile(s.downloadFilename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
@@ -171,6 +193,12 @@ func New(baseDir string, maxSize, maxBackups, bufferSize int) (Storage, error) {
 		return nil, err
 	}
 	graphsageFile.Close()
+
+	costFile, err := os.OpenFile(s.costFilename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return nil, err
+	}
+	costFile.Close()
 
 	return s, nil
 }
@@ -206,6 +234,34 @@ func (s *storage) CreateDownload(download Download) error {
 
 	// Write downloads to buffer.
 	s.downloadBuffer = append(s.downloadBuffer, download)
+	return nil
+}
+
+func (s *storage) CreateCost(cost Cost) error {
+	s.costMu.Lock()
+	defer s.costMu.Unlock()
+
+	if s.bufferSize == 0 {
+		if err := s.createCost(cost); err != nil {
+			return err
+		}
+
+		s.costCount++
+		return nil
+	}
+
+	if len(s.costBuffer) >= s.bufferSize {
+		if err := s.createCost(s.costBuffer...); err != nil {
+			return err
+		}
+
+		s.costCount += int64(s.bufferSize)
+
+		// Keep allocated memory.
+		s.costBuffer = s.costBuffer[:0]
+	}
+
+	s.costBuffer = append(s.costBuffer, cost)
 	return nil
 }
 
@@ -315,6 +371,43 @@ func (s *storage) ListDownload() ([]Download, error) {
 	return downloads, nil
 }
 
+func (s *storage) ListCost() ([]Cost, error) {
+	s.costMu.RLock()
+	defer s.costMu.RUnlock()
+
+	fileInfos, err := s.costBackups()
+	if err != nil {
+		return nil, err
+	}
+
+	var readers []io.Reader
+	var readClosers []io.ReadCloser
+	defer func() {
+		for _, readCloser := range readClosers {
+			if err := readCloser.Close(); err != nil {
+				logger.Error(err)
+			}
+		}
+	}()
+
+	for _, fileInfo := range fileInfos {
+		file, err := os.Open(filepath.Join(s.baseDir, fileInfo.Name()))
+		if err != nil {
+			return nil, err
+		}
+
+		readers = append(readers, file)
+		readClosers = append(readClosers, file)
+	}
+
+	var costs []Cost
+	if err := gocsv.UnmarshalWithoutHeaders(io.MultiReader(readers...), &costs); err != nil {
+		return nil, err
+	}
+
+	return costs, nil
+}
+
 // ListNetworkTopology returns all network topologies in csv file.
 func (s *storage) ListNetworkTopology() ([]NetworkTopology, error) {
 	s.networkTopologyMu.RLock()
@@ -396,6 +489,10 @@ func (s *storage) DownloadCount() int64 {
 	return s.downloadCount
 }
 
+func (s *storage) CostCount() int64 {
+	return s.costCount
+}
+
 // NetworkTopologyCount returns the count of network topologies.
 func (s *storage) NetworkTopologyCount() int64 {
 	return s.networkTopologyCount
@@ -412,6 +509,28 @@ func (s *storage) OpenDownload() (io.ReadCloser, error) {
 	defer s.downloadMu.RUnlock()
 
 	fileInfos, err := s.downloadBackups()
+	if err != nil {
+		return nil, err
+	}
+
+	var readClosers []io.ReadCloser
+	for _, fileInfo := range fileInfos {
+		file, err := os.Open(filepath.Join(s.baseDir, fileInfo.Name()))
+		if err != nil {
+			return nil, err
+		}
+
+		readClosers = append(readClosers, file)
+	}
+
+	return pkgio.MultiReadCloser(readClosers...), nil
+}
+
+func (s *storage) OpenCost() (io.ReadCloser, error) {
+	s.costMu.RLock()
+	defer s.costMu.RUnlock()
+
+	fileInfos, err := s.costBackups()
 	if err != nil {
 		return nil, err
 	}
@@ -531,6 +650,25 @@ func (s *storage) ClearNetworkTopology() error {
 	return nil
 }
 
+func (s *storage) ClearCost() error {
+	s.costMu.Lock()
+	defer s.costMu.Unlock()
+
+	fileInfos, err := s.costBackups()
+	if err != nil {
+		return err
+	}
+
+	for _, fileInfo := range fileInfos {
+		filename := filepath.Join(s.baseDir, fileInfo.Name())
+		if err := os.Remove(filename); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // ClearGraphsage removes all graphsage record.
 func (s *storage) ClearGraphsage() error {
 	s.graphsageMu.Lock()
@@ -580,6 +718,20 @@ func (s *storage) createDownload(downloads ...Download) (err error) {
 	}()
 
 	return gocsv.MarshalWithoutHeaders(downloads, file)
+}
+
+func (s *storage) createCost(costs ...Cost) (err error) {
+	file, err := s.openCostFile()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if cerr := file.Close(); cerr != nil {
+			err = errors.Join(err, cerr)
+		}
+	}()
+
+	return gocsv.MarshalWithoutHeaders(costs, file)
 }
 
 // createNetworkTopology inserts the network topologies into csv file.
@@ -638,6 +790,38 @@ func (s *storage) openDownloadFile() (*os.File, error) {
 	}
 
 	file, err := os.OpenFile(s.downloadFilename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
+	if err != nil {
+		return nil, err
+	}
+
+	return file, nil
+}
+
+func (s *storage) openCostFile() (*os.File, error) {
+	fileInfo, err := os.Stat(s.costFilename)
+	if err != nil {
+		return nil, err
+	}
+
+	if s.maxSize <= fileInfo.Size() {
+		if err := os.Rename(s.costFilename, s.costBackupFilename()); err != nil {
+			return nil, err
+		}
+	}
+
+	fileInfos, err := s.costBackups()
+	if err != nil {
+		return nil, err
+	}
+
+	if s.maxBackups < len(fileInfos)+1 {
+		filename := filepath.Join(s.baseDir, fileInfos[0].Name())
+		if err := os.Remove(filename); err != nil {
+			return nil, err
+		}
+	}
+
+	file, err := os.OpenFile(s.costFilename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
 		return nil, err
 	}
@@ -717,6 +901,11 @@ func (s *storage) downloadBackupFilename() string {
 	return filepath.Join(s.baseDir, fmt.Sprintf("%s_%s.%s", DownloadFilePrefix, timestamp, CSVFileExt))
 }
 
+func (s *storage) costBackupFilename() string {
+	timestamp := time.Now().Format(backupTimeFormat)
+	return filepath.Join(s.baseDir, fmt.Sprintf("%s_%s.%s", CostPrefix, timestamp, CSVFileExt))
+}
+
 // networkTopologyBackupFilename generates network topology file name of backup files.
 func (s *storage) networkTopologyBackupFilename() string {
 	timestamp := time.Now().Format(backupTimeFormat)
@@ -747,6 +936,32 @@ func (s *storage) downloadBackups() ([]fs.FileInfo, error) {
 
 	if len(backups) <= 0 {
 		return nil, errors.New("download files backup does not exist")
+	}
+
+	sort.Slice(backups, func(i, j int) bool {
+		return backups[i].ModTime().Before(backups[j].ModTime())
+	})
+
+	return backups, nil
+}
+
+func (s *storage) costBackups() ([]fs.FileInfo, error) {
+	fileInfos, err := os.ReadDir(s.baseDir)
+	if err != nil {
+		return nil, err
+	}
+
+	var backups []fs.FileInfo
+	regexp := regexp.MustCompile(CostPrefix)
+	for _, fileInfo := range fileInfos {
+		if !fileInfo.IsDir() && regexp.MatchString(fileInfo.Name()) {
+			info, _ := fileInfo.Info()
+			backups = append(backups, info)
+		}
+	}
+
+	if len(backups) <= 0 {
+		return nil, errors.New("cost files backup does not exist")
 	}
 
 	sort.Slice(backups, func(i, j int) bool {

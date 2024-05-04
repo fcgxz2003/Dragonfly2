@@ -40,6 +40,20 @@ func (m *MockStorage) EXPECT() *MockStorageMockRecorder {
 	return m.recorder
 }
 
+// ClearCost mocks base method.
+func (m *MockStorage) ClearCost() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClearCost")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ClearCost indicates an expected call of ClearCost.
+func (mr *MockStorageMockRecorder) ClearCost() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearCost", reflect.TypeOf((*MockStorage)(nil).ClearCost))
+}
+
 // ClearDownload mocks base method.
 func (m *MockStorage) ClearDownload() error {
 	m.ctrl.T.Helper()
@@ -108,6 +122,34 @@ func (m *MockStorage) ClearNetworkTopology() error {
 func (mr *MockStorageMockRecorder) ClearNetworkTopology() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearNetworkTopology", reflect.TypeOf((*MockStorage)(nil).ClearNetworkTopology))
+}
+
+// CostCount mocks base method.
+func (m *MockStorage) CostCount() int64 {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CostCount")
+	ret0, _ := ret[0].(int64)
+	return ret0
+}
+
+// CostCount indicates an expected call of CostCount.
+func (mr *MockStorageMockRecorder) CostCount() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CostCount", reflect.TypeOf((*MockStorage)(nil).CostCount))
+}
+
+// CreateCost mocks base method.
+func (m *MockStorage) CreateCost(arg0 storage.Cost) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateCost", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateCost indicates an expected call of CreateCost.
+func (mr *MockStorageMockRecorder) CreateCost(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCost", reflect.TypeOf((*MockStorage)(nil).CreateCost), arg0)
 }
 
 // CreateDownload mocks base method.
@@ -180,6 +222,21 @@ func (mr *MockStorageMockRecorder) GraphsageCount() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GraphsageCount", reflect.TypeOf((*MockStorage)(nil).GraphsageCount))
 }
 
+// ListCost mocks base method.
+func (m *MockStorage) ListCost() ([]storage.Cost, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListCost")
+	ret0, _ := ret[0].([]storage.Cost)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListCost indicates an expected call of ListCost.
+func (mr *MockStorageMockRecorder) ListCost() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCost", reflect.TypeOf((*MockStorage)(nil).ListCost))
+}
+
 // ListDownload mocks base method.
 func (m *MockStorage) ListDownload() ([]storage.Download, error) {
 	m.ctrl.T.Helper()
@@ -237,6 +294,21 @@ func (m *MockStorage) NetworkTopologyCount() int64 {
 func (mr *MockStorageMockRecorder) NetworkTopologyCount() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NetworkTopologyCount", reflect.TypeOf((*MockStorage)(nil).NetworkTopologyCount))
+}
+
+// OpenCost mocks base method.
+func (m *MockStorage) OpenCost() (io.ReadCloser, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "OpenCost")
+	ret0, _ := ret[0].(io.ReadCloser)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// OpenCost indicates an expected call of OpenCost.
+func (mr *MockStorageMockRecorder) OpenCost() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OpenCost", reflect.TypeOf((*MockStorage)(nil).OpenCost))
 }
 
 // OpenDownload mocks base method.

@@ -444,6 +444,18 @@ func (s *Server) Stop() {
 		logger.Info("clean network topology storage completed")
 	}
 
+	if err := s.storage.ClearGraphsage(); err != nil {
+		logger.Errorf("clean graphsage storage failed %s", err.Error())
+	} else {
+		logger.Info("clean graphsage storage completed")
+	}
+
+	if err := s.storage.ClearCost(); err != nil {
+		logger.Errorf("clean cost storage failed %s", err.Error())
+	} else {
+		logger.Info("clean cost storage completed")
+	}
+
 	// Stop GC.
 	s.gc.Stop()
 	logger.Info("gc closed")

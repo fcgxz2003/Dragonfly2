@@ -224,6 +224,21 @@ type Download struct {
 	UpdatedAt int64 `csv:"updatedAt"`
 }
 
+type Cost struct {
+	// ID is peer id.
+	ID string `csv:"id"`
+
+	hostID string `csv:"hostId"`
+
+	hostIP string `csv:"hostIp"`
+
+	hostPort int32 `csv:"hostPort"`
+
+	TaskContentLength int64 `csv:"taskContentLength"`
+
+	Cost int64 `csv:"cost"`
+}
+
 // Probes contains content for probes.
 type Probes struct {
 	// AverageRTT is the average round-trip time of probes.
