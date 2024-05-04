@@ -1629,4 +1629,17 @@ func (v *V1) createDownloadRecord(peer *resource.Peer, parents []*resource.Peer,
 	if err := v.storage.CreateDownload(download); err != nil {
 		peer.Log.Error(err)
 	}
+
+	cost := storage.Cost{
+		ID:                peer.ID,
+		HostID:            peer.Host.ID,
+		HostIP:            peer.Host.IP,
+		HostPort:          peer.Host.Port,
+		TaskContentLength: peer.Task.TotalPieceCount.Load(),
+		Cost:              peer.Cost.Load().Microseconds(),
+	}
+
+	if err := v.storage.CreateCost(cost); err != nil {
+		peer.Log.Error(err)
+	}
 }

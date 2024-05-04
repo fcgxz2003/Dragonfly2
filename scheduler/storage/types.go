@@ -228,13 +228,13 @@ type Cost struct {
 	// ID is peer id.
 	ID string `csv:"id"`
 
-	hostID string `csv:"hostId"`
+	HostID string `csv:"hostId"`
 
-	hostIP string `csv:"hostIp"`
+	HostIP string `csv:"hostIp"`
 
-	hostPort int32 `csv:"hostPort"`
+	HostPort int32 `csv:"hostPort"`
 
-	TaskContentLength int64 `csv:"taskContentLength"`
+	TaskContentLength int32 `csv:"taskContentLength"`
 
 	Cost int64 `csv:"cost"`
 }
