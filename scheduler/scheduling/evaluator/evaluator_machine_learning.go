@@ -107,6 +107,7 @@ func newEvaluatorMachineLearning(options ...MachineLearningOption) Evaluator {
 // EvaluateParents sort parents by evaluating multiple feature scores.
 func (e *evaluatorMachineLearning) EvaluateParents(parents []*resource.Peer, child *resource.Peer, totalPieceCount int32) []*resource.Peer {
 	var scores = make([]float64, len(parents))
+	logger.Info("using machine learining algorithm")
 	scores, err := e.evaluate(parents, child)
 	if err != nil {
 		logger.Infof("machine learining algorithm error:", err)
@@ -114,7 +115,6 @@ func (e *evaluatorMachineLearning) EvaluateParents(parents []*resource.Peer, chi
 		scores = e.evaluateBase(parents, child, totalPieceCount)
 	}
 
-	logger.Info("using machine learining algorithm")
 	sort.Slice(
 		parents,
 		func(i, j int) bool {
