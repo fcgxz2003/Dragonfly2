@@ -431,6 +431,7 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 	}
 
 	data := postprocess(inferResponse.RawOutputContents)
+	logger.Info(data)
 	// Storage graphsage record.
 	outputs := make([]float64, len(data))
 	for i, v := range data {
@@ -475,6 +476,7 @@ func (e *evaluatorMachineLearning) inference(parents []*resource.Peer, child *re
 		}
 	}
 
+	logger.Info(outputs)
 	return outputs, nil
 }
 
