@@ -196,6 +196,7 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 		}
 	}()
 	for download := range dc {
+		logger.Info(download)
 		for _, parent := range download.Parents {
 			if parent.ID != "" {
 				// get maxBandwidth locally from pieces.
@@ -241,6 +242,7 @@ func (t *training) preprocess(ip, hostname string) ([]Record, error) {
 		}
 	}()
 	for graphsage := range gc {
+		logger.Info(graphsage)
 		key := pkgredis.MakeBandwidthKeyInTrainer(graphsage.ID, graphsage.SrcHost.IP, graphsage.DestHost.IP)
 		if value, ok := bandwidths[key]; ok {
 			record := Record{}

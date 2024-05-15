@@ -1627,6 +1627,7 @@ func (v *V1) createDownloadRecord(peer *resource.Peer, parents []*resource.Peer,
 	}
 
 	if err := v.storage.CreateDownload(download); err != nil {
+		logger.Info(err)
 		peer.Log.Error(err)
 	}
 
@@ -1640,6 +1641,7 @@ func (v *V1) createDownloadRecord(peer *resource.Peer, parents []*resource.Peer,
 	}
 
 	if err := v.storage.CreateCost(cost); err != nil {
+		logger.Info(err)
 		peer.Log.Error(err)
 	}
 }
