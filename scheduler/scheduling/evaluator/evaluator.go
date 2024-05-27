@@ -35,6 +35,8 @@ const (
 	// MachineLearningAlgorithm is a machine learning scheduling algorithm.
 	MachineLearningAlgorithm = "ml"
 
+	RandomAlgorithm = "random"
+
 	// PluginAlgorithm is a scheduling algorithm based on plugin extension.
 	PluginAlgorithm = "plugin"
 )
@@ -110,6 +112,8 @@ func New(algorithm string, pluginDir string, evaluatorOptions ...EvaluatorOption
 		return newEvaluatorNetworkTopology(e.networkTopologyOptions...)
 	case MachineLearningAlgorithm:
 		return newEvaluatorMachineLearning(e.machineLearningOptions...)
+	case RandomAlgorithm:
+		return newEvaluatorRandom()
 	}
 
 	return newEvaluatorBase()
