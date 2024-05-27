@@ -20,6 +20,7 @@ import (
 	"math/rand"
 	"time"
 
+	logger "d7y.io/dragonfly/v2/internal/dflog"
 	"d7y.io/dragonfly/v2/scheduler/resource"
 )
 
@@ -33,6 +34,7 @@ func newEvaluatorRandom() Evaluator {
 
 // EvaluateParents sort parents by evaluating multiple feature scores.
 func (e *evaluatorRandom) EvaluateParents(parents []*resource.Peer, child *resource.Peer, totalPieceCount int32) []*resource.Peer {
+	logger.Info("using random algorithm")
 	rand.New(rand.NewSource(time.Now().UnixNano()))
 	rand.Shuffle(len(parents), func(i, j int) {
 		parents[i], parents[j] = parents[j], parents[i]
