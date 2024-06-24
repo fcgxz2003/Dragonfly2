@@ -31,6 +31,7 @@ import (
 
 // Training defines the interface to train GNN and MLP model.
 type Training interface {
+
 	// Train begins training GNN and MLP model.
 	Train(context.Context, string, string) error
 }
@@ -44,11 +45,43 @@ type training struct {
 	storage storage.Storage
 
 	// Manager service clent.
-	managerClient managerclient.V2
+	managerClient managerclient.V1
 }
 
 // New returns a new Training.
-func New(cfg *config.Config, managerClient managerclient.V2, storage storage.Storage) Training {
+func New(cfg *config.Config, managerClient managerclient.V1, storage storage.Storage) Training {
+	// //
+	// listSchedulersResp, err := managerClient.ListSchedulers(context.Background(), &managerv1.ListSchedulersRequest{
+	// 	SourceType: managerv1.SourceType_PEER_SOURCE,
+	// 	Hostname:   mc.config.Host.Hostname,
+	// 	Ip:         mc.config.Host.AdvertiseIP.String(),
+	// 	Version:    version.GitVersion,
+	// 	Commit:     version.GitCommit,
+	// 	HostInfo: map[string]string{
+	// 		searcher.ConditionIDC:      mc.config.Host.IDC,
+	// 		searcher.ConditionLocation: mc.config.Host.Location,
+	// 	},
+	// })
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// // Upload all models to s3 as base model for sheduling.
+	// if err := managerClient.CreateModel(context.Background(), &managerv1.CreateModelRequest{
+	// 	Hostname: hostname,
+	// 	Ip:       ip,
+	// 	Request: &managerv1.CreateModelRequest_CreateGnnRequest{
+	// 		CreateGnnRequest: &managerv1.CreateGNNRequest{
+	// 			Data:      data,
+	// 			Recall:    0,
+	// 			Precision: 0,
+	// 			F1Score:   0,
+	// 		},
+	// 	},
+	// }); err != nil {
+	// 	logger.Error("upload model to s3 error: %v", err.Error())
+	// }
+
 	return &training{
 		config:        cfg,
 		storage:       storage,
