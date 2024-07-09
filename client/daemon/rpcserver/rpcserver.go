@@ -224,7 +224,7 @@ func (s *server) GetPieceTasks(ctx context.Context, request *commonv1.PieceTaskR
 		}, nil
 	}
 
-	logger.Debugf("receive get piece tasks request, task id: %s, src peer: %s, dst peer: %s, piece start num: %d, limit: %d, count: %d, total piece: %s, total content length: %d",
+	logger.Debugf("receive get piece tasks request, task id: %s, src peer: %s, dst peer: %s, piece start num: %d, limit: %d, count: %d, total piece: %d, total content length: %d",
 		request.TaskId, request.SrcPid, request.DstPid, request.StartNum, request.Limit, len(p.PieceInfos), p.TotalPiece, p.ContentLength)
 	p.DstAddr = s.uploadAddr
 	return p, nil
@@ -798,6 +798,16 @@ func (s *server) download(ctx context.Context, req *dfdaemonv1.DownRequest, stre
 				log.Errorf("task %s/%s failed: %d/%s", p.PeerID, p.TaskID, p.State.Code, p.State.Msg)
 				return dferrors.New(p.State.Code, p.State.Msg)
 			}
+			if p.PeerTaskDone {
+				// update permission before send last result
+				if req.Uid != 0 && req.Gid != 0 {
+					log.Infof("change owner to uid %d gid %d", req.Uid, req.Gid)
+					if err = os.Chown(req.Output, int(req.Uid), int(req.Gid)); err != nil {
+						log.Errorf("change owner failed: %s", err)
+						return err
+					}
+				}
+			}
 			err = stream.Send(&dfdaemonv1.DownResult{
 				TaskId:          p.TaskID,
 				PeerId:          p.PeerID,
@@ -813,13 +823,6 @@ func (s *server) download(ctx context.Context, req *dfdaemonv1.DownRequest, stre
 			if p.PeerTaskDone {
 				p.DoneCallback()
 				log.Infof("task %s/%s done", p.PeerID, p.TaskID)
-				if req.Uid != 0 && req.Gid != 0 {
-					log.Infof("change own to uid %d gid %d", req.Uid, req.Gid)
-					if err = os.Chown(req.Output, int(req.Uid), int(req.Gid)); err != nil {
-						log.Errorf("change own failed: %s", err)
-						return err
-					}
-				}
 				return nil
 			}
 		case <-ctx.Done():
