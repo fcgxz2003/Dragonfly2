@@ -449,10 +449,40 @@ func (s *managerServerV1) GetScheduler(ctx context.Context, req *managerv1.GetSc
 	return &pbScheduler, nil
 }
 
-// TODO
 // Get Schedulers configuration.
 func (s *managerServerV1) GetSchedulers(ctx context.Context, req *managerv1.GetSchedulersRequest) (*managerv1.GetSchedulersResponse, error) {
-	return nil, nil
+	schedulers := []models.Scheduler{}
+	if err := s.db.WithContext(ctx).Where("state = ?", "active").Find(&schedulers).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			logger.Error(err)
+		}
+
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	var pbGetSchedulersResponse managerv1.GetSchedulersResponse
+	for _, scheduler := range schedulers {
+		// Marshal features of scheduler.
+		features, err := scheduler.Features.MarshalJSON()
+		if err != nil {
+			return nil, status.Error(codes.DataLoss, err.Error())
+		}
+
+		// Construct scheduler.
+		pbGetSchedulersResponse.Schedulers = append(pbGetSchedulersResponse.Schedulers, &managerv1.Scheduler{
+			Id:                 uint64(scheduler.ID),
+			Hostname:           scheduler.Hostname,
+			Idc:                scheduler.IDC,
+			Location:           scheduler.Location,
+			Ip:                 scheduler.IP,
+			Port:               scheduler.Port,
+			State:              scheduler.State,
+			Features:           features,
+			SchedulerClusterId: uint64(scheduler.SchedulerClusterID),
+		})
+	}
+
+	return &pbGetSchedulersResponse, nil
 }
 
 // Update scheduler configuration.
