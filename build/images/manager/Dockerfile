@@ -1,16 +1,16 @@
 ARG BASE_IMAGE=alpine:3.17
 
-FROM node:20-alpine as console-builder
+# FROM node:20-alpine as console-builder
 
-WORKDIR /build
+# WORKDIR /build
 
-COPY ./manager/console/package.json /build
+# COPY ./manager/console/package.json /build
 
-RUN yarn install --frozen-lockfile --network-timeout 1000000
+# RUN yarn install --frozen-lockfile --network-timeout 1000000
 
-COPY ./manager/console /build
+# COPY ./manager/console /build
 
-RUN yarn build
+# RUN yarn build
 
 FROM golang:1.21.1-alpine3.17 as server-builder
 
