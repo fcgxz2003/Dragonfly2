@@ -24,7 +24,7 @@ RUN apk --no-cache add bash make gcc libc-dev git
 
 COPY . /go/src/d7y.io/dragonfly/v2
 
-COPY --from=console-builder /build/dist /go/src/d7y.io/dragonfly/v2/manager/dist
+# COPY --from=console-builder /build/dist /go/src/d7y.io/dragonfly/v2/manager/dist
 
 RUN make build-manager-server && make install-manager
 
