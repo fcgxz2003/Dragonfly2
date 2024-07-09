@@ -183,9 +183,21 @@ func (s *schedulerServerV2) DeleteCachePeer(ctx context.Context, req *schedulerv
 }
 
 // TODO Implement the following methods.
-// UploadCacheTask uploads cache task to scheduler.
-func (s *schedulerServerV2) UploadCacheTask(ctx context.Context, req *schedulerv2.UploadCacheTaskRequest) (*commonv2.CacheTask, error) {
+// UploadCacheTaskFailed implements scheduler.SchedulerServer.
+func (s *schedulerServerV2) UploadCacheTaskFailed(context.Context, *schedulerv2.UploadCacheTaskFailedRequest) (*emptypb.Empty, error) {
+	return new(emptypb.Empty), nil
+}
+
+// TODO Implement the following methods.
+// UploadCacheTaskFinished implements scheduler.SchedulerServer.
+func (s *schedulerServerV2) UploadCacheTaskFinished(context.Context, *schedulerv2.UploadCacheTaskFinishedRequest) (*commonv2.CacheTask, error) {
 	return nil, nil
+}
+
+// TODO Implement the following methods.
+// UploadCacheTaskStarted implements scheduler.SchedulerServer.
+func (s *schedulerServerV2) UploadCacheTaskStarted(context.Context, *schedulerv2.UploadCacheTaskStartedRequest) (*emptypb.Empty, error) {
+	return new(emptypb.Empty), nil
 }
 
 // TODO Implement the following methods.

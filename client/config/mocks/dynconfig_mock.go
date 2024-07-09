@@ -5,14 +5,15 @@
 //
 //	mockgen -destination mocks/dynconfig_mock.go -source dynconfig.go -package mocks
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
 import (
 	reflect "reflect"
 
-	manager "d7y.io/api/v2/pkg/apis/manager/v1"
 	config "d7y.io/dragonfly/v2/client/config"
+	manager "github.com/fcgxz2003/api/v2/pkg/apis/manager/v1"
 	gomock "go.uber.org/mock/gomock"
 	resolver "google.golang.org/grpc/resolver"
 )

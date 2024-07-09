@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mocks/client_v1_mock.go -source client_v1.go -package mocks
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -13,7 +14,7 @@ import (
 	reflect "reflect"
 	time "time"
 
-	manager "d7y.io/api/v2/pkg/apis/manager/v1"
+	manager "github.com/fcgxz2003/api/v2/pkg/apis/manager/v1"
 	gomock "go.uber.org/mock/gomock"
 	grpc "google.golang.org/grpc"
 )
@@ -112,6 +113,26 @@ func (mr *MockV1MockRecorder) GetScheduler(arg0, arg1 any, arg2 ...any) *gomock.
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetScheduler", reflect.TypeOf((*MockV1)(nil).GetScheduler), varargs...)
+}
+
+// GetSchedulers mocks base method.
+func (m *MockV1) GetSchedulers(arg0 context.Context, arg1 *manager.GetSchedulersRequest, arg2 ...grpc.CallOption) (*manager.GetSchedulersResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetSchedulers", varargs...)
+	ret0, _ := ret[0].(*manager.GetSchedulersResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSchedulers indicates an expected call of GetSchedulers.
+func (mr *MockV1MockRecorder) GetSchedulers(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSchedulers", reflect.TypeOf((*MockV1)(nil).GetSchedulers), varargs...)
 }
 
 // KeepAlive mocks base method.

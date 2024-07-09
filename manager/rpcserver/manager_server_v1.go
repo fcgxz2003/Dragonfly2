@@ -35,7 +35,7 @@ import (
 
 	commonv1 "d7y.io/api/v2/pkg/apis/common/v1"
 	inference "d7y.io/api/v2/pkg/apis/inference"
-	managerv1 "d7y.io/api/v2/pkg/apis/manager/v1"
+	managerv1 "github.com/fcgxz2003/api/v2/pkg/apis/manager/v1"
 
 	logger "d7y.io/dragonfly/v2/internal/dflog"
 	"d7y.io/dragonfly/v2/manager/cache"
@@ -447,6 +447,12 @@ func (s *managerServerV1) GetScheduler(ctx context.Context, req *managerv1.GetSc
 	}
 
 	return &pbScheduler, nil
+}
+
+// TODO
+// Get Schedulers configuration.
+func (s *managerServerV1) GetSchedulers(ctx context.Context, req *managerv1.GetSchedulersRequest) (*managerv1.GetSchedulersResponse, error) {
+	return nil, nil
 }
 
 // Update scheduler configuration.

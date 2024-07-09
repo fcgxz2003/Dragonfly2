@@ -32,8 +32,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	managerv1 "d7y.io/api/v2/pkg/apis/manager/v1"
-	securityv1 "d7y.io/api/v2/pkg/apis/security/v1"
+	managerv1 "github.com/fcgxz2003/api/v2/pkg/apis/manager/v1"
+	securityv1 "github.com/fcgxz2003/api/v2/pkg/apis/security/v1"
 
 	logger "d7y.io/dragonfly/v2/internal/dflog"
 	"d7y.io/dragonfly/v2/pkg/dfnet"
@@ -100,6 +100,9 @@ type V1 interface {
 	// Get Scheduler and Scheduler cluster configuration.
 	GetScheduler(context.Context, *managerv1.GetSchedulerRequest, ...grpc.CallOption) (*managerv1.Scheduler, error)
 
+	// Get Schedulers configuration.
+	GetSchedulers(context.Context, *managerv1.GetSchedulersRequest, ...grpc.CallOption) (*managerv1.GetSchedulersResponse, error)
+
 	// Update scheduler configuration.
 	UpdateScheduler(context.Context, *managerv1.UpdateSchedulerRequest, ...grpc.CallOption) (*managerv1.Scheduler, error)
 
@@ -154,6 +157,14 @@ func (v *v1) GetScheduler(ctx context.Context, req *managerv1.GetSchedulerReques
 	defer cancel()
 
 	return v.ManagerClient.GetScheduler(ctx, req, opts...)
+}
+
+// Get Schedulers configuration.
+func (v *v1) GetSchedulers(ctx context.Context, req *managerv1.GetSchedulersRequest, opts ...grpc.CallOption) (*managerv1.GetSchedulersResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, contextTimeout)
+	defer cancel()
+
+	return v.ManagerClient.GetSchedulers(ctx, req, opts...)
 }
 
 // Update scheduler configuration.

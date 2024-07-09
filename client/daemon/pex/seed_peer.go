@@ -19,7 +19,7 @@ package pex
 import (
 	"net"
 
-	managerv1 "d7y.io/api/v2/pkg/apis/manager/v1"
+	managerv1 "github.com/fcgxz2003/api/v2/pkg/apis/manager/v1"
 )
 
 const defaultGossipPort = 7946
