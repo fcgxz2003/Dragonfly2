@@ -19,6 +19,7 @@ package training
 import (
 	"context"
 
+	managerv1 "github.com/fcgxz2003/api/v2/pkg/apis/manager/v1"
 	"golang.org/x/sync/errgroup"
 
 	logger "d7y.io/dragonfly/v2/internal/dflog"
@@ -31,7 +32,6 @@ import (
 
 // Training defines the interface to train GNN and MLP model.
 type Training interface {
-
 	// Train begins training GNN and MLP model.
 	Train(context.Context, string, string) error
 }
@@ -50,37 +50,34 @@ type training struct {
 
 // New returns a new Training.
 func New(cfg *config.Config, managerClient managerclient.V1, storage storage.Storage) Training {
-	// //
-	// listSchedulersResp, err := managerClient.ListSchedulers(context.Background(), &managerv1.ListSchedulersRequest{
-	// 	SourceType: managerv1.SourceType_PEER_SOURCE,
-	// 	Hostname:   mc.config.Host.Hostname,
-	// 	Ip:         mc.config.Host.AdvertiseIP.String(),
-	// 	Version:    version.GitVersion,
-	// 	Commit:     version.GitCommit,
-	// 	HostInfo: map[string]string{
-	// 		searcher.ConditionIDC:      mc.config.Host.IDC,
-	// 		searcher.ConditionLocation: mc.config.Host.Location,
-	// 	},
-	// })
-	// if err != nil {
-	// 	return nil, err
-	// }
+	getSchedulersResp, err := managerClient.GetSchedulers(context.Background(), &managerv1.GetSchedulersRequest{
+		SourceType: managerv1.SourceType_TRAINER_SOURCE,
+	})
+	if err != nil {
+		logger.Error("get scheduler configuration error: %v", err.Error())
+	}
 
-	// // Upload all models to s3 as base model for sheduling.
-	// if err := managerClient.CreateModel(context.Background(), &managerv1.CreateModelRequest{
-	// 	Hostname: hostname,
-	// 	Ip:       ip,
-	// 	Request: &managerv1.CreateModelRequest_CreateGnnRequest{
-	// 		CreateGnnRequest: &managerv1.CreateGNNRequest{
-	// 			Data:      data,
-	// 			Recall:    0,
-	// 			Precision: 0,
-	// 			F1Score:   0,
-	// 		},
-	// 	},
-	// }); err != nil {
-	// 	logger.Error("upload model to s3 error: %v", err.Error())
-	// }
+	data := []byte{}
+	// Compress base model to bytes.
+
+	// Upload all models to s3 as base model for each scheduler.
+	// The recall, precision and fiscore of base model depend on pre-trained data.
+	for _, scheduler := range getSchedulersResp.Schedulers {
+		if err := managerClient.CreateModel(context.Background(), &managerv1.CreateModelRequest{
+			Hostname: scheduler.Hostname,
+			Ip:       scheduler.Ip,
+			Request: &managerv1.CreateModelRequest_CreateGnnRequest{
+				CreateGnnRequest: &managerv1.CreateGNNRequest{
+					Data:      data,
+					Recall:    0,
+					Precision: 0,
+					F1Score:   0,
+				},
+			},
+		}); err != nil {
+			logger.Error("upload base model of scheudler %s to s3 error: %v", scheduler.Ip, err.Error())
+		}
+	}
 
 	return &training{
 		config:        cfg,
