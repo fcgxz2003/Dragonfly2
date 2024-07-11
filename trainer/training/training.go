@@ -32,6 +32,12 @@ import (
 
 // Training defines the interface to train GNN and MLP model.
 type Training interface {
+	// Start starts the training service.
+	Start()
+
+	// Stop stops the training service.
+	Stop()
+
 	// Train begins training GNN and MLP model.
 	Train(context.Context, string, string) error
 }
@@ -84,6 +90,16 @@ func New(cfg *config.Config, managerClient managerclient.V1, storage storage.Sto
 		storage:       storage,
 		managerClient: managerClient,
 	}
+}
+
+// Start starts the training service by uploading base model for each scheduler.
+func (t *training) Start() {
+	// TODO
+}
+
+// Stop stops the training service by delete all model in s3.
+func (t *training) Stop() {
+	//TODO
 }
 
 // Train begins training GNN and MLP model.

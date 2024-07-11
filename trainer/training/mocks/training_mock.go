@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mocks/training_mock.go -source training.go -package mocks
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -36,6 +37,30 @@ func NewMockTraining(ctrl *gomock.Controller) *MockTraining {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockTraining) EXPECT() *MockTrainingMockRecorder {
 	return m.recorder
+}
+
+// Start mocks base method.
+func (m *MockTraining) Start() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Start")
+}
+
+// Start indicates an expected call of Start.
+func (mr *MockTrainingMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockTraining)(nil).Start))
+}
+
+// Stop mocks base method.
+func (m *MockTraining) Stop() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Stop")
+}
+
+// Stop indicates an expected call of Stop.
+func (mr *MockTrainingMockRecorder) Stop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockTraining)(nil).Stop))
 }
 
 // Train mocks base method.
