@@ -61,6 +61,9 @@ type Server struct {
 
 	// Storage interface.
 	storage storage.Storage
+
+	// Training interface.
+	training training.Training
 }
 
 // New creates a new Server.
@@ -91,10 +94,10 @@ func New(ctx context.Context, cfg *config.Config, d dfpath.Dfpath) (*Server, err
 	s.storage = storage.New(d.DataDir())
 
 	// Initialize Training.
-	training := training.New(cfg, s.managerClient, s.storage)
+	s.training = training.New(cfg, s.managerClient, s.storage)
 
 	// Initialize trainer grpc server.
-	s.grpcServer = rpcserver.New(cfg, s.storage, training)
+	s.grpcServer = rpcserver.New(cfg, s.storage, s.training)
 
 	// Initialize metrics.
 	if cfg.Metrics.Enable {
@@ -135,7 +138,14 @@ func (s *Server) Serve() error {
 	// Started GRPC server.
 	logger.Infof("started grpc server at %s://%s", listener.Addr().Network(), listener.Addr().String())
 	if err := s.grpcServer.Serve(listener); err != nil {
-		logger.Errorf("stoped grpc server: %s", err.Error())
+		logger.Errorf("start grpc server: %s", err.Error())
+		return err
+	}
+
+	// Started Training server.
+	logger.Infof("started training server.")
+	if err := s.training.Start(); err != nil {
+		logger.Errorf("start training server: %s", err.Error())
 		return err
 	}
 
@@ -183,5 +193,12 @@ func (s *Server) Stop() {
 		s.grpcServer.Stop()
 	case <-stopped:
 		t.Stop()
+	}
+
+	// Stop training server.
+	if err := s.training.Stop(); err != nil {
+		logger.Errorf("stop training server failed %s", err.Error())
+	} else {
+		logger.Info("stop training server successfully")
 	}
 }

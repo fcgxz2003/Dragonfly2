@@ -33,10 +33,10 @@ import (
 // Training defines the interface to train GNN and MLP model.
 type Training interface {
 	// Start starts the training service.
-	Start()
+	Start() error
 
 	// Stop stops the training service.
-	Stop()
+	Stop() error
 
 	// Train begins training GNN and MLP model.
 	Train(context.Context, string, string) error
@@ -64,12 +64,11 @@ func New(cfg *config.Config, managerClient managerclient.V1, storage storage.Sto
 }
 
 // Start starts the training service by uploading base model for each scheduler.
-func (t *training) Start() {
+func (t *training) Start() error {
 	// Compress base model to bytes.
 	data, err := compress(GraphsageBaseModel)
 	if err != nil {
-		logger.Error("compress graphsage base model error: %v", err.Error())
-		return
+		return err
 	}
 
 	// Get all schedulers configuration.
@@ -77,7 +76,7 @@ func (t *training) Start() {
 		SourceType: managerv1.SourceType_TRAINER_SOURCE,
 	})
 	if err != nil {
-		logger.Error("get scheduler configuration error: %v", err.Error())
+		return err
 	}
 
 	// Upload all models to s3 as base model for each scheduler.
@@ -95,14 +94,17 @@ func (t *training) Start() {
 				},
 			},
 		}); err != nil {
-			logger.Error("upload base model of scheudler %s to s3 error: %v", scheduler.Ip, err.Error())
+			return err
 		}
 	}
+
+	return nil
 }
 
 // Stop stops the training service by delete all model in s3.
-func (t *training) Stop() {
+func (t *training) Stop() error {
 	// TDOO: delete all model.
+	return nil
 }
 
 // Train begins training GNN and MLP model.
