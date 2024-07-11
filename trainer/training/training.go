@@ -56,20 +56,34 @@ type training struct {
 
 // New returns a new Training.
 func New(cfg *config.Config, managerClient managerclient.V1, storage storage.Storage) Training {
-	getSchedulersResp, err := managerClient.GetSchedulers(context.Background(), &managerv1.GetSchedulersRequest{
+	return &training{
+		config:        cfg,
+		storage:       storage,
+		managerClient: managerClient,
+	}
+}
+
+// Start starts the training service by uploading base model for each scheduler.
+func (t *training) Start() {
+	// Compress base model to bytes.
+	data, err := compress(GraphsageBaseModel)
+	if err != nil {
+		logger.Error("compress graphsage base model error: %v", err.Error())
+		return
+	}
+
+	// Get all schedulers configuration.
+	getSchedulersResp, err := t.managerClient.GetSchedulers(context.Background(), &managerv1.GetSchedulersRequest{
 		SourceType: managerv1.SourceType_TRAINER_SOURCE,
 	})
 	if err != nil {
 		logger.Error("get scheduler configuration error: %v", err.Error())
 	}
 
-	data := []byte{}
-	// Compress base model to bytes.
-
 	// Upload all models to s3 as base model for each scheduler.
 	// The recall, precision and fiscore of base model depend on pre-trained data.
 	for _, scheduler := range getSchedulersResp.Schedulers {
-		if err := managerClient.CreateModel(context.Background(), &managerv1.CreateModelRequest{
+		if err := t.managerClient.CreateModel(context.Background(), &managerv1.CreateModelRequest{
 			Hostname: scheduler.Hostname,
 			Ip:       scheduler.Ip,
 			Request: &managerv1.CreateModelRequest_CreateGnnRequest{
@@ -84,22 +98,11 @@ func New(cfg *config.Config, managerClient managerclient.V1, storage storage.Sto
 			logger.Error("upload base model of scheudler %s to s3 error: %v", scheduler.Ip, err.Error())
 		}
 	}
-
-	return &training{
-		config:        cfg,
-		storage:       storage,
-		managerClient: managerClient,
-	}
-}
-
-// Start starts the training service by uploading base model for each scheduler.
-func (t *training) Start() {
-	// TODO
 }
 
 // Stop stops the training service by delete all model in s3.
 func (t *training) Stop() {
-	//TODO
+	// TDOO: delete all model.
 }
 
 // Train begins training GNN and MLP model.

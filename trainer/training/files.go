@@ -24,6 +24,14 @@ import (
 	"path/filepath"
 )
 
+const (
+	// Separator is file separator.
+	Separator = "/"
+
+	// GraphsageBaseModel is base model for graphsage algorithm.
+	GraphsageBaseModel = "models/graphsage"
+)
+
 func compress(root string) ([]byte, error) {
 	buffer := new(bytes.Buffer)
 	zipWriter := zip.NewWriter(buffer)
@@ -35,7 +43,7 @@ func compress(root string) ([]byte, error) {
 		}
 
 		if info.IsDir() {
-			_, err = zipWriter.Create(relPath + "/")
+			_, err = zipWriter.Create(relPath + Separator)
 			if err != nil {
 				return err
 			}
