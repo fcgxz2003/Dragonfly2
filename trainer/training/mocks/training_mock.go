@@ -40,9 +40,11 @@ func (m *MockTraining) EXPECT() *MockTrainingMockRecorder {
 }
 
 // Start mocks base method.
-func (m *MockTraining) Start() {
+func (m *MockTraining) Start() error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Start")
+	ret := m.ctrl.Call(m, "Start")
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // Start indicates an expected call of Start.
@@ -52,9 +54,11 @@ func (mr *MockTrainingMockRecorder) Start() *gomock.Call {
 }
 
 // Stop mocks base method.
-func (m *MockTraining) Stop() {
+func (m *MockTraining) Stop() error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Stop")
+	ret := m.ctrl.Call(m, "Stop")
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // Stop indicates an expected call of Stop.
