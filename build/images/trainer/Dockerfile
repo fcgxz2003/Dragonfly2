@@ -1,6 +1,6 @@
-ARG BASE_IMAGE=alpine:3.17
+ARG BASE_IMAGE=ubuntu
 
-FROM golang:1.21.1-alpine3.17 as builder
+FROM golang:1.21.1 as builder
 
 ARG GOPROXY
 ARG GOTAGS
@@ -8,7 +8,13 @@ ARG GOGCFLAGS
 
 WORKDIR /go/src/d7y.io/dragonfly/v2
 
-RUN apk --no-cache add bash make gcc libc-dev git
+RUN apt-get update \
+    && apt-get install -y bash make gcc libc-dev git
+
+RUN apt-get install -y curl \
+    && curl -o libtensorflow.tar.gz https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-linux-x86_64-2.15.0.tar.gz \
+    && tar -C /usr/local -xzf libtensorflow.tar.gz  \ 
+    && rm libtensorflow.tar.gz
 
 COPY . /go/src/d7y.io/dragonfly/v2
 
@@ -17,6 +23,9 @@ RUN make build-trainer && make install-trainer
 FROM ${BASE_IMAGE} as health
 
 ENV GRPC_HEALTH_PROBE_VERSION v0.4.24
+
+RUN apt-get update \
+    && apt-get install -y wget
 
 RUN if [ "$(uname -m)" = "ppc64le" ]; then \
     wget -qO/bin/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-linux-ppc64le; \
@@ -30,10 +39,16 @@ RUN if [ "$(uname -m)" = "ppc64le" ]; then \
 FROM ${BASE_IMAGE}
 
 ENV PATH=/opt/dragonfly/bin:$PATH
+ENV TF_ENABLE_ONEDNN_OPTS=0
 RUN echo "hosts: files dns" > /etc/nsswitch.conf
 
 COPY --from=builder /opt/dragonfly/bin/trainer /opt/dragonfly/bin/trainer
+COPY --from=builder /usr/local/lib /usr/local/lib
 COPY --from=health /bin/grpc_health_probe /bin/grpc_health_probe
+COPY --from=health /var/lib/apt/lists /var/lib/apt/lists
+COPY ../trainer/training/base_model /var/lib/dragonfly/base_model
+
+RUN ldconfig /usr/local/lib
 
 EXPOSE 9090
 

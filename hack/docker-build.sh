@@ -57,7 +57,16 @@ main() {
         docker-build manager
         ;;
     trainer)
-        docker-build trainer
+    name=trainer
+    docker build \
+      --platform ${GOOS}/${GOARCH} \
+      --build-arg CGO_ENABLED="${CGO_ENABLED}" \
+      --build-arg GOPROXY="${GOPROXY}" \
+      --build-arg GOTAGS="${GOTAGS}" \
+      --build-arg GOGCFLAGS="${GOGCFLAGS}" \
+      --build-arg BASE_IMAGE="ubuntu" \
+      -t "${D7Y_REGISTRY}/${name}:${D7Y_VERSION}" \
+      -f "${IMAGES_DIR}/${name}/Dockerfile" .
     esac
 }
 
