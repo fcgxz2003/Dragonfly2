@@ -39,34 +39,6 @@ func (m *MockTraining) EXPECT() *MockTrainingMockRecorder {
 	return m.recorder
 }
 
-// Start mocks base method.
-func (m *MockTraining) Start() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Start")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Start indicates an expected call of Start.
-func (mr *MockTrainingMockRecorder) Start() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockTraining)(nil).Start))
-}
-
-// Stop mocks base method.
-func (m *MockTraining) Stop() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Stop")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Stop indicates an expected call of Stop.
-func (mr *MockTrainingMockRecorder) Stop() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockTraining)(nil).Stop))
-}
-
 // Train mocks base method.
 func (m *MockTraining) Train(arg0 context.Context, arg1, arg2 string) error {
 	m.ctrl.T.Helper()

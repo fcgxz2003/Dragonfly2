@@ -20,9 +20,7 @@ import (
 	"context"
 
 	managerv1 "github.com/fcgxz2003/api/v2/pkg/apis/manager/v1"
-	"golang.org/x/sync/errgroup"
 
-	logger "d7y.io/dragonfly/v2/internal/dflog"
 	managerclient "d7y.io/dragonfly/v2/pkg/rpc/manager/client"
 	"d7y.io/dragonfly/v2/trainer/config"
 	"d7y.io/dragonfly/v2/trainer/storage"
@@ -32,12 +30,6 @@ import (
 
 // Training defines the interface to train GNN and MLP model.
 type Training interface {
-	// Start starts the training service.
-	Start() error
-
-	// Stop stops the training service.
-	Stop() error
-
 	// Train begins training GNN and MLP model.
 	Train(context.Context, string, string) error
 }
@@ -63,66 +55,72 @@ func New(cfg *config.Config, managerClient managerclient.V1, storage storage.Sto
 	}
 }
 
-// Start starts the training service by uploading base model for each scheduler.
-func (t *training) Start() error {
+// // Start starts the training service by uploading base model for each scheduler.
+// func (t *training) Start() error {
+// 	// Compress base model to bytes.
+// 	data, err := compress(GraphsageBaseModel)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	// Get all schedulers configuration.
+// 	getSchedulersResp, err := t.managerClient.GetSchedulers(context.Background(), &managerv1.GetSchedulersRequest{
+// 		SourceType: managerv1.SourceType_TRAINER_SOURCE,
+// 	})
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	// Upload all models to s3 as base model for each scheduler.
+// 	// The recall, precision and fiscore of base model depend on pre-trained data.
+// 	for _, scheduler := range getSchedulersResp.Schedulers {
+// 		if err := t.managerClient.CreateModel(context.Background(), &managerv1.CreateModelRequest{
+// 			Hostname: scheduler.Hostname,
+// 			Ip:       scheduler.Ip,
+// 			Request: &managerv1.CreateModelRequest_CreateGnnRequest{
+// 				CreateGnnRequest: &managerv1.CreateGNNRequest{
+// 					Data:      data,
+// 					Recall:    0,
+// 					Precision: 0,
+// 					F1Score:   0,
+// 				},
+// 			},
+// 		}); err != nil {
+// 			return err
+// 		}
+// 	}
+
+// 	return nil
+// }
+
+// Train begins training GNN and MLP model.
+func (t *training) Train(ctx context.Context, ip, hostname string) error {
+	// Test.
 	// Compress base model to bytes.
 	data, err := compress(GraphsageBaseModel)
 	if err != nil {
 		return err
 	}
 
-	// Get all schedulers configuration.
-	getSchedulersResp, err := t.managerClient.GetSchedulers(context.Background(), &managerv1.GetSchedulersRequest{
-		SourceType: managerv1.SourceType_TRAINER_SOURCE,
-	})
-	if err != nil {
-		return err
-	}
-
-	// Upload all models to s3 as base model for each scheduler.
-	// The recall, precision and fiscore of base model depend on pre-trained data.
-	for _, scheduler := range getSchedulersResp.Schedulers {
-		if err := t.managerClient.CreateModel(context.Background(), &managerv1.CreateModelRequest{
-			Hostname: scheduler.Hostname,
-			Ip:       scheduler.Ip,
-			Request: &managerv1.CreateModelRequest_CreateGnnRequest{
-				CreateGnnRequest: &managerv1.CreateGNNRequest{
-					Data:      data,
-					Recall:    0,
-					Precision: 0,
-					F1Score:   0,
-				},
+	if err := t.managerClient.CreateModel(ctx, &managerv1.CreateModelRequest{
+		Hostname: hostname,
+		Ip:       ip,
+		Request: &managerv1.CreateModelRequest_CreateGnnRequest{
+			CreateGnnRequest: &managerv1.CreateGNNRequest{
+				Data:      data,
+				Recall:    0,
+				Precision: 0,
+				F1Score:   0,
 			},
-		}); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// Stop stops the training service by delete all model in s3.
-func (t *training) Stop() error {
-	// TDOO: delete all model.
-	return nil
-}
-
-// Train begins training GNN and MLP model.
-func (t *training) Train(ctx context.Context, ip, hostname string) error {
-	eg, ctx := errgroup.WithContext(ctx)
-	eg.Go(func() error {
-		return t.trainGNN(ctx, ip, hostname)
-	})
-
-	eg.Go(func() error {
-		return t.trainMLP(ctx, ip, hostname)
-	})
-
-	// Wait for all train tasks to complete.
-	if err := eg.Wait(); err != nil {
-		logger.Errorf("training failed: %v", err)
+		},
+	}); err != nil {
 		return err
 	}
+
+	// // Start training graphsage model.
+	// if err := t.trainGNN(ctx, ip, hostname); err != nil {
+	// 	return err
+	// }
 
 	// TODO Clean up training data.
 	return nil
@@ -135,15 +133,5 @@ func (t *training) trainGNN(ctx context.Context, ip, hostname string) error {
 	// 2. Preprocess training data.
 	// 2. Train GNN model.
 	// 3. Upload GNN model to manager service.
-	return nil
-}
-
-// TODO Add training MLP logic.
-// trainMLP trains MLP model.
-func (t *training) trainMLP(ctx context.Context, ip, hostname string) error {
-	// 1. Get training data from storage.
-	// 2. Preprocess training data.
-	// 2. Train MLP model.
-	// 3. Upload MLP model to manager service.
 	return nil
 }

@@ -123,15 +123,6 @@ func (s *Server) Serve() error {
 		}()
 	}
 
-	// Started Training server.
-	go func() {
-		logger.Infof("started training server.")
-		if err := s.training.Start(); err != nil {
-			logger.Errorf("start training server: %s", err.Error())
-			return
-		}
-	}()
-
 	// Generate GRPC limit listener.
 	ip, ok := ip.FormatIP(s.config.Server.ListenIP.String())
 	if !ok {
@@ -179,13 +170,6 @@ func (s *Server) Stop() {
 		} else {
 			logger.Info("metrics server closed under request")
 		}
-	}
-
-	// Stop training server.
-	if err := s.training.Stop(); err != nil {
-		logger.Errorf("stop training server failed %s", err.Error())
-	} else {
-		logger.Info("stop training server successfully")
 	}
 
 	// Stop GRPC server.
