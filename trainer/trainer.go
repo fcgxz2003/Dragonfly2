@@ -123,6 +123,15 @@ func (s *Server) Serve() error {
 		}()
 	}
 
+	// Started Training server.
+	go func() {
+		logger.Infof("started training server.")
+		if err := s.training.Start(); err != nil {
+			logger.Errorf("start training server: %s", err.Error())
+			return
+		}
+	}()
+
 	// Generate GRPC limit listener.
 	ip, ok := ip.FormatIP(s.config.Server.ListenIP.String())
 	if !ok {
@@ -139,13 +148,6 @@ func (s *Server) Serve() error {
 	logger.Infof("started grpc server at %s://%s", listener.Addr().Network(), listener.Addr().String())
 	if err := s.grpcServer.Serve(listener); err != nil {
 		logger.Errorf("start grpc server: %s", err.Error())
-		return err
-	}
-
-	// Started Training server.
-	logger.Infof("started training server.")
-	if err := s.training.Start(); err != nil {
-		logger.Errorf("start training server: %s", err.Error())
 		return err
 	}
 
@@ -179,6 +181,13 @@ func (s *Server) Stop() {
 		}
 	}
 
+	// Stop training server.
+	if err := s.training.Stop(); err != nil {
+		logger.Errorf("stop training server failed %s", err.Error())
+	} else {
+		logger.Info("stop training server successfully")
+	}
+
 	// Stop GRPC server.
 	stopped := make(chan struct{})
 	go func() {
@@ -193,12 +202,5 @@ func (s *Server) Stop() {
 		s.grpcServer.Stop()
 	case <-stopped:
 		t.Stop()
-	}
-
-	// Stop training server.
-	if err := s.training.Stop(); err != nil {
-		logger.Errorf("stop training server failed %s", err.Error())
-	} else {
-		logger.Info("stop training server successfully")
 	}
 }
