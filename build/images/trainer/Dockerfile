@@ -38,6 +38,15 @@ RUN if [ "$(uname -m)" = "ppc64le" ]; then \
 
 FROM ${BASE_IMAGE}
 
+RUN apt-get install -y vim bash-completion \
+    && rm /bin/sh \
+    && ln -s /bin/bash /bin/sh \
+    && rm -rf /var/lib/apt/lists/* \
+    && echo 'PS1="\[\e[1;32m\]\u@\h \[\e[1;34m\]\w\[\e[0m\]\$ "' >> ~/.bashrc \
+    && . ~/.bashrc
+
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+
 ENV PATH=/opt/dragonfly/bin:$PATH
 ENV TF_ENABLE_ONEDNN_OPTS=0
 RUN echo "hosts: files dns" > /etc/nsswitch.conf
