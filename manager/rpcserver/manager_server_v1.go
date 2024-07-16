@@ -33,8 +33,8 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"gorm.io/gorm"
 
-	commonv1 "d7y.io/api/v2/pkg/apis/common/v1"
-	inference "d7y.io/api/v2/pkg/apis/inference"
+	commonv1 "github.com/fcgxz2003/api/v2/pkg/apis/common/v1"
+	inference "github.com/fcgxz2003/api/v2/pkg/apis/inference"
 	managerv1 "github.com/fcgxz2003/api/v2/pkg/apis/manager/v1"
 
 	logger "d7y.io/dragonfly/v2/internal/dflog"

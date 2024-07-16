@@ -25,7 +25,7 @@ import (
 	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc/resolver"
 
-	managerv2 "d7y.io/api/v2/pkg/apis/manager/v2"
+	managerv2 "github.com/fcgxz2003/api/v2/pkg/apis/manager/v2"
 
 	"d7y.io/dragonfly/v2/pkg/gc"
 	"d7y.io/dragonfly/v2/scheduler/config"

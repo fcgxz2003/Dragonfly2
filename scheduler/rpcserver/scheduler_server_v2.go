@@ -21,8 +21,8 @@ import (
 
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 
-	commonv2 "d7y.io/api/v2/pkg/apis/common/v2"
-	schedulerv2 "d7y.io/api/v2/pkg/apis/scheduler/v2"
+	commonv2 "github.com/fcgxz2003/api/v2/pkg/apis/common/v2"
+	schedulerv2 "github.com/fcgxz2003/api/v2/pkg/apis/scheduler/v2"
 
 	"d7y.io/dragonfly/v2/scheduler/config"
 	"d7y.io/dragonfly/v2/scheduler/metrics"

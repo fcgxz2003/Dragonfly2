@@ -5,6 +5,7 @@
 //
 //	mockgen -destination peertask_manager_mock.go -source peertask_manager.go -package peer
 //
+
 // Package peer is a generated GoMock package.
 package peer
 
@@ -13,10 +14,10 @@ import (
 	io "io"
 	reflect "reflect"
 
-	common "d7y.io/api/v2/pkg/apis/common/v1"
-	scheduler "d7y.io/api/v2/pkg/apis/scheduler/v1"
 	storage "d7y.io/dragonfly/v2/client/daemon/storage"
 	logger "d7y.io/dragonfly/v2/internal/dflog"
+	common "github.com/fcgxz2003/api/v2/pkg/apis/common/v1"
+	scheduler "github.com/fcgxz2003/api/v2/pkg/apis/scheduler/v1"
 	gomock "go.uber.org/mock/gomock"
 	status "google.golang.org/grpc/status"
 )

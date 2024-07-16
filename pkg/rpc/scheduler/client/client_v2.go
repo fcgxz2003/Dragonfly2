@@ -31,8 +31,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/balancer"
 
-	commonv2 "d7y.io/api/v2/pkg/apis/common/v2"
-	schedulerv2 "d7y.io/api/v2/pkg/apis/scheduler/v2"
+	commonv2 "github.com/fcgxz2003/api/v2/pkg/apis/common/v2"
+	schedulerv2 "github.com/fcgxz2003/api/v2/pkg/apis/scheduler/v2"
 
 	"d7y.io/dragonfly/v2/client/config"
 	logger "d7y.io/dragonfly/v2/internal/dflog"

@@ -25,7 +25,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"d7y.io/api/v2/pkg/apis/dfdaemon/v1"
+	"github.com/fcgxz2003/api/v2/pkg/apis/dfdaemon/v1"
 
 	logger "d7y.io/dragonfly/v2/internal/dflog"
 )

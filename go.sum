@@ -439,8 +439,8 @@ github.com/envoyproxy/protoc-gen-validate v1.0.4/go.mod h1:qys6tmnRsYrQqIhm2bvKZ
 github.com/evanphx/json-patch v4.9.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fatih/structs v1.1.0/go.mod h1:9NiDSp5zOcgEDl+j00MP/WkGVPOlPRLejGD8Ga6PJ7M=
-github.com/fcgxz2003/api/v2 v2.0.0-20240709031127-2d32b1e59bad h1:WboCgMvqLjFZzgfoj1/ckQxTAvoBNk2+EII0UvvD6zI=
-github.com/fcgxz2003/api/v2 v2.0.0-20240709031127-2d32b1e59bad/go.mod h1:1Bv/CEsfuTyp3xf/YWs0R679PJHBl/LNZKx5VYoHnNY=
+github.com/fcgxz2003/api/v2 v2.0.0-20240716014304-1b619d4a1da8 h1:J2OtQzPyBy/AdO1LYngw/TSzr8vkBqeIuWBINEsN8NI=
+github.com/fcgxz2003/api/v2 v2.0.0-20240716014304-1b619d4a1da8/go.mod h1:4hBMjVKpL/+KHdBpOnDtk/DcqOhqh14M210/A4E+rvQ=
 github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2Wg=
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/form3tech-oss/jwt-go v3.2.2+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=

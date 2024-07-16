@@ -26,9 +26,9 @@ import (
 	"github.com/looplab/fsm"
 	"go.uber.org/atomic"
 
-	commonv2 "d7y.io/api/v2/pkg/apis/common/v2"
-	schedulerv1 "d7y.io/api/v2/pkg/apis/scheduler/v1"
-	schedulerv2 "d7y.io/api/v2/pkg/apis/scheduler/v2"
+	commonv2 "github.com/fcgxz2003/api/v2/pkg/apis/common/v2"
+	schedulerv1 "github.com/fcgxz2003/api/v2/pkg/apis/scheduler/v1"
+	schedulerv2 "github.com/fcgxz2003/api/v2/pkg/apis/scheduler/v2"
 
 	logger "d7y.io/dragonfly/v2/internal/dflog"
 	"d7y.io/dragonfly/v2/pkg/container/set"

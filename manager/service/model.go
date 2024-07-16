@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"strings"
 
-	inference "d7y.io/api/v2/pkg/apis/inference"
+	inference "github.com/fcgxz2003/api/v2/pkg/apis/inference"
 
 	"d7y.io/dragonfly/v2/manager/models"
 	"d7y.io/dragonfly/v2/manager/types"

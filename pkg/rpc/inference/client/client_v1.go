@@ -29,7 +29,7 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"google.golang.org/grpc"
 
-	inference "d7y.io/api/v2/pkg/apis/inference"
+	inference "github.com/fcgxz2003/api/v2/pkg/apis/inference"
 
 	logger "d7y.io/dragonfly/v2/internal/dflog"
 )

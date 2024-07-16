@@ -37,11 +37,11 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	commonv2 "d7y.io/api/v2/pkg/apis/common/v2"
-	dfdaemonv2 "d7y.io/api/v2/pkg/apis/dfdaemon/v2"
-	managerv2 "d7y.io/api/v2/pkg/apis/manager/v2"
-	schedulerv2 "d7y.io/api/v2/pkg/apis/scheduler/v2"
-	schedulerv2mocks "d7y.io/api/v2/pkg/apis/scheduler/v2/mocks"
+	commonv2 "github.com/fcgxz2003/api/v2/pkg/apis/common/v2"
+	dfdaemonv2 "github.com/fcgxz2003/api/v2/pkg/apis/dfdaemon/v2"
+	managerv2 "github.com/fcgxz2003/api/v2/pkg/apis/manager/v2"
+	schedulerv2 "github.com/fcgxz2003/api/v2/pkg/apis/scheduler/v2"
+	schedulerv2mocks "github.com/fcgxz2003/api/v2/pkg/apis/scheduler/v2/mocks"
 
 	managertypes "d7y.io/dragonfly/v2/manager/types"
 	nethttp "d7y.io/dragonfly/v2/pkg/net/http"

@@ -19,7 +19,7 @@ package pex
 import (
 	"github.com/hashicorp/memberlist"
 
-	dfdaemonv1 "d7y.io/api/v2/pkg/apis/dfdaemon/v1"
+	dfdaemonv1 "github.com/fcgxz2003/api/v2/pkg/apis/dfdaemon/v1"
 )
 
 type InitialMember = memberlist.Node

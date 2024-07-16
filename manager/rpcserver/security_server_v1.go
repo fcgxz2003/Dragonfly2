@@ -27,7 +27,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	securityv1 "d7y.io/api/v2/pkg/apis/security/v1"
+	securityv1 "github.com/fcgxz2003/api/v2/pkg/apis/security/v1"
 
 	logger "d7y.io/dragonfly/v2/internal/dflog"
 )

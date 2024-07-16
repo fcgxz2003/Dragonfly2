@@ -31,12 +31,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
-	commonv2 "d7y.io/api/v2/pkg/apis/common/v2"
-	managerv2 "d7y.io/api/v2/pkg/apis/manager/v2"
-	schedulerv1 "d7y.io/api/v2/pkg/apis/scheduler/v1"
-	v1mocks "d7y.io/api/v2/pkg/apis/scheduler/v1/mocks"
-	schedulerv2 "d7y.io/api/v2/pkg/apis/scheduler/v2"
-	v2mocks "d7y.io/api/v2/pkg/apis/scheduler/v2/mocks"
+	commonv2 "github.com/fcgxz2003/api/v2/pkg/apis/common/v2"
+	managerv2 "github.com/fcgxz2003/api/v2/pkg/apis/manager/v2"
+	schedulerv1 "github.com/fcgxz2003/api/v2/pkg/apis/scheduler/v1"
+	v1mocks "github.com/fcgxz2003/api/v2/pkg/apis/scheduler/v1/mocks"
+	schedulerv2 "github.com/fcgxz2003/api/v2/pkg/apis/scheduler/v2"
+	v2mocks "github.com/fcgxz2003/api/v2/pkg/apis/scheduler/v2/mocks"
 
 	"d7y.io/dragonfly/v2/pkg/idgen"
 	nethttp "d7y.io/dragonfly/v2/pkg/net/http"

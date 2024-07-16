@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mocks/client_v2_mock.go -source client_v2.go -package mocks
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -13,7 +14,7 @@ import (
 	reflect "reflect"
 	time "time"
 
-	manager "d7y.io/api/v2/pkg/apis/manager/v2"
+	manager "github.com/fcgxz2003/api/v2/pkg/apis/manager/v2"
 	gomock "go.uber.org/mock/gomock"
 	grpc "google.golang.org/grpc"
 )

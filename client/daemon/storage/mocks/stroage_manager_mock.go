@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mocks/stroage_manager_mock.go -source storage_manager.go -package mocks
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -14,10 +15,10 @@ import (
 	reflect "reflect"
 	time "time"
 
-	common "d7y.io/api/v2/pkg/apis/common/v1"
-	dfdaemon "d7y.io/api/v2/pkg/apis/dfdaemon/v1"
 	storage "d7y.io/dragonfly/v2/client/daemon/storage"
 	http "d7y.io/dragonfly/v2/pkg/net/http"
+	common "github.com/fcgxz2003/api/v2/pkg/apis/common/v1"
+	dfdaemon "github.com/fcgxz2003/api/v2/pkg/apis/dfdaemon/v1"
 	gomock "go.uber.org/mock/gomock"
 )
 

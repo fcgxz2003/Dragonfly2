@@ -25,7 +25,7 @@ import (
 
 	"go.uber.org/atomic"
 
-	commonv1 "d7y.io/api/v2/pkg/apis/common/v1"
+	commonv1 "github.com/fcgxz2003/api/v2/pkg/apis/common/v1"
 
 	logger "d7y.io/dragonfly/v2/internal/dflog"
 	"d7y.io/dragonfly/v2/pkg/digest"

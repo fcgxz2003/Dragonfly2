@@ -28,7 +28,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
-	commonv1 "d7y.io/api/v2/pkg/apis/common/v1"
+	commonv1 "github.com/fcgxz2003/api/v2/pkg/apis/common/v1"
 
 	"d7y.io/dragonfly/v2/internal/dferrors"
 )

@@ -26,8 +26,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
-	commonv2 "d7y.io/api/v2/pkg/apis/common/v2"
-	managerv2 "d7y.io/api/v2/pkg/apis/manager/v2"
+	commonv2 "github.com/fcgxz2003/api/v2/pkg/apis/common/v2"
+	managerv2 "github.com/fcgxz2003/api/v2/pkg/apis/manager/v2"
 
 	"d7y.io/dragonfly/v2/pkg/rpc/manager/client/mocks"
 	"d7y.io/dragonfly/v2/pkg/types"

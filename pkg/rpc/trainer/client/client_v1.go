@@ -29,7 +29,7 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"google.golang.org/grpc"
 
-	trainerv1 "d7y.io/api/v2/pkg/apis/trainer/v1"
+	trainerv1 "github.com/fcgxz2003/api/v2/pkg/apis/trainer/v1"
 
 	logger "d7y.io/dragonfly/v2/internal/dflog"
 )

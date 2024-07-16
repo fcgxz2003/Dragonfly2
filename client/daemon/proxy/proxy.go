@@ -39,8 +39,8 @@ import (
 	"go.uber.org/atomic"
 	"golang.org/x/sync/semaphore"
 
-	commonv1 "d7y.io/api/v2/pkg/apis/common/v1"
-	schedulerv1 "d7y.io/api/v2/pkg/apis/scheduler/v1"
+	commonv1 "github.com/fcgxz2003/api/v2/pkg/apis/common/v1"
+	schedulerv1 "github.com/fcgxz2003/api/v2/pkg/apis/scheduler/v1"
 
 	"d7y.io/dragonfly/v2/client/config"
 	"d7y.io/dragonfly/v2/client/daemon/metrics"

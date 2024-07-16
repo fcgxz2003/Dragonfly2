@@ -25,9 +25,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	gomock "go.uber.org/mock/gomock"
 
-	commonv2 "d7y.io/api/v2/pkg/apis/common/v2"
-	dfdaemonv2 "d7y.io/api/v2/pkg/apis/dfdaemon/v2"
-	schedulerv1 "d7y.io/api/v2/pkg/apis/scheduler/v1"
+	commonv2 "github.com/fcgxz2003/api/v2/pkg/apis/common/v2"
+	dfdaemonv2 "github.com/fcgxz2003/api/v2/pkg/apis/dfdaemon/v2"
+	schedulerv1 "github.com/fcgxz2003/api/v2/pkg/apis/scheduler/v1"
 )
 
 func TestSeedPeer_newSeedPeer(t *testing.T) {

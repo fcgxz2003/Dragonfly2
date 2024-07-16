@@ -25,8 +25,8 @@ import (
 	"go.uber.org/atomic"
 	"go.uber.org/mock/gomock"
 
-	schedulerv1 "d7y.io/api/v2/pkg/apis/scheduler/v1"
-	"d7y.io/api/v2/pkg/apis/scheduler/v1/mocks"
+	schedulerv1 "github.com/fcgxz2003/api/v2/pkg/apis/scheduler/v1"
+	"github.com/fcgxz2003/api/v2/pkg/apis/scheduler/v1/mocks"
 
 	logger "d7y.io/dragonfly/v2/internal/dflog"
 )

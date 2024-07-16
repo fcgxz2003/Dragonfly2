@@ -41,8 +41,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc/status"
 
-	commonv1 "d7y.io/api/v2/pkg/apis/common/v1"
-	errordetailsv1 "d7y.io/api/v2/pkg/apis/errordetails/v1"
+	commonv1 "github.com/fcgxz2003/api/v2/pkg/apis/common/v1"
+	errordetailsv1 "github.com/fcgxz2003/api/v2/pkg/apis/errordetails/v1"
 
 	"d7y.io/dragonfly/v2/client/config"
 	"d7y.io/dragonfly/v2/client/daemon/metrics"

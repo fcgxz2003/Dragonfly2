@@ -29,8 +29,8 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"gorm.io/gorm"
 
-	commonv2 "d7y.io/api/v2/pkg/apis/common/v2"
-	managerv2 "d7y.io/api/v2/pkg/apis/manager/v2"
+	commonv2 "github.com/fcgxz2003/api/v2/pkg/apis/common/v2"
+	managerv2 "github.com/fcgxz2003/api/v2/pkg/apis/manager/v2"
 
 	logger "d7y.io/dragonfly/v2/internal/dflog"
 	"d7y.io/dragonfly/v2/manager/cache"

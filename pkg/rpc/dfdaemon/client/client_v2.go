@@ -29,8 +29,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/balancer"
 
-	commonv2 "d7y.io/api/v2/pkg/apis/common/v2"
-	dfdaemonv2 "d7y.io/api/v2/pkg/apis/dfdaemon/v2"
+	commonv2 "github.com/fcgxz2003/api/v2/pkg/apis/common/v2"
+	dfdaemonv2 "github.com/fcgxz2003/api/v2/pkg/apis/dfdaemon/v2"
 
 	logger "d7y.io/dragonfly/v2/internal/dflog"
 	pkgbalancer "d7y.io/dragonfly/v2/pkg/balancer"

@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mocks/client_v1_mock.go -source client_v1.go -package mocks
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -12,8 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	common "d7y.io/api/v2/pkg/apis/common/v1"
-	dfdaemon "d7y.io/api/v2/pkg/apis/dfdaemon/v1"
+	common "github.com/fcgxz2003/api/v2/pkg/apis/common/v1"
+	dfdaemon "github.com/fcgxz2003/api/v2/pkg/apis/dfdaemon/v1"
 	gomock "go.uber.org/mock/gomock"
 	grpc "google.golang.org/grpc"
 )

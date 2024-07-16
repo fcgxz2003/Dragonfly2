@@ -40,8 +40,8 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 
-	commonv1 "d7y.io/api/v2/pkg/apis/common/v1"
-	dfdaemonv1 "d7y.io/api/v2/pkg/apis/dfdaemon/v1"
+	commonv1 "github.com/fcgxz2003/api/v2/pkg/apis/common/v1"
+	dfdaemonv1 "github.com/fcgxz2003/api/v2/pkg/apis/dfdaemon/v1"
 
 	"d7y.io/dragonfly/v2/client/config"
 	"d7y.io/dragonfly/v2/client/daemon/gc"

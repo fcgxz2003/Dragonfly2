@@ -22,7 +22,7 @@ require (
 	github.com/docker/docker v27.0.3+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/docker/go-units v0.4.0
-	github.com/fcgxz2003/api/v2 v2.0.0-20240709031127-2d32b1e59bad
+	github.com/fcgxz2003/api/v2 v2.0.0-20240716014304-1b619d4a1da8
 	github.com/gaius-qi/ping v1.0.0
 	github.com/gammazero/deque v0.2.1
 	github.com/gin-contrib/gzip v0.0.6

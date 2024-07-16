@@ -24,7 +24,7 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 
-	dfdaemonv1 "d7y.io/api/v2/pkg/apis/dfdaemon/v1"
+	dfdaemonv1 "github.com/fcgxz2003/api/v2/pkg/apis/dfdaemon/v1"
 
 	logger "d7y.io/dragonfly/v2/internal/dflog"
 	"d7y.io/dragonfly/v2/pkg/retry"

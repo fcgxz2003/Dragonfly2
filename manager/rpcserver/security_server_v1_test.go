@@ -34,7 +34,7 @@ import (
 	testifyrequire "github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/durationpb"
 
-	securityv1 "d7y.io/api/v2/pkg/apis/security/v1"
+	securityv1 "github.com/fcgxz2003/api/v2/pkg/apis/security/v1"
 )
 
 func TestIssueCertificate(t *testing.T) {

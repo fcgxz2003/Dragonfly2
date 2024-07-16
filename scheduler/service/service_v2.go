@@ -28,9 +28,9 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	commonv2 "d7y.io/api/v2/pkg/apis/common/v2"
-	dfdaemonv2 "d7y.io/api/v2/pkg/apis/dfdaemon/v2"
-	schedulerv2 "d7y.io/api/v2/pkg/apis/scheduler/v2"
+	commonv2 "github.com/fcgxz2003/api/v2/pkg/apis/common/v2"
+	dfdaemonv2 "github.com/fcgxz2003/api/v2/pkg/apis/dfdaemon/v2"
+	schedulerv2 "github.com/fcgxz2003/api/v2/pkg/apis/scheduler/v2"
 
 	logger "d7y.io/dragonfly/v2/internal/dflog"
 	"d7y.io/dragonfly/v2/pkg/container/set"

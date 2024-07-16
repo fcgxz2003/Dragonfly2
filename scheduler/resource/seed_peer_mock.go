@@ -5,6 +5,7 @@
 //
 //	mockgen -destination seed_peer_mock.go -source seed_peer.go -package resource
 //
+
 // Package resource is a generated GoMock package.
 package resource
 
@@ -12,9 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	dfdaemon "d7y.io/api/v2/pkg/apis/dfdaemon/v2"
-	scheduler "d7y.io/api/v2/pkg/apis/scheduler/v1"
 	http "d7y.io/dragonfly/v2/pkg/net/http"
+	dfdaemon "github.com/fcgxz2003/api/v2/pkg/apis/dfdaemon/v2"
+	scheduler "github.com/fcgxz2003/api/v2/pkg/apis/scheduler/v1"
 	gomock "go.uber.org/mock/gomock"
 )
 
