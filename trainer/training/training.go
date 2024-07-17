@@ -22,6 +22,7 @@ import (
 
 	managerv1 "github.com/fcgxz2003/api/v2/pkg/apis/manager/v1"
 
+	logger "d7y.io/dragonfly/v2/internal/dflog"
 	managerclient "d7y.io/dragonfly/v2/pkg/rpc/manager/client"
 	"d7y.io/dragonfly/v2/trainer/config"
 	"d7y.io/dragonfly/v2/trainer/storage"
@@ -116,6 +117,8 @@ func (t *training) Train(ctx context.Context, ip, hostname string) error {
 		return err
 	}
 
+	logger.Info(ip)
+	logger.Info(hostname)
 	if err := t.managerClient.CreateModel(ctx, &managerv1.CreateModelRequest{
 		Hostname: hostname,
 		Ip:       ip,
