@@ -27,9 +27,6 @@ import (
 const (
 	// Separator is file separator.
 	Separator = "/"
-
-	// GraphsageBaseModel is base model for graphsage algorithm.
-	GraphsageBaseModel = "models/graphsage"
 )
 
 func compress(root string) ([]byte, error) {

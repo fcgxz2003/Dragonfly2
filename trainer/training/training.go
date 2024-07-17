@@ -18,6 +18,7 @@ package training
 
 import (
 	"context"
+	"fmt"
 
 	managerv1 "github.com/fcgxz2003/api/v2/pkg/apis/manager/v1"
 
@@ -27,6 +28,11 @@ import (
 )
 
 //go:generate mockgen -destination mocks/training_mock.go -source training.go -package mocks
+
+const (
+	// GraphsageBaseModel is base model for graphsage algorithm.
+	GraphsageBaseModel = "var/lib/dragonfly/models"
+)
 
 // Training defines the interface to train GNN and MLP model.
 type Training interface {
@@ -39,19 +45,27 @@ type training struct {
 	// Trainer service config.
 	config *config.Config
 
+	// Base directory.
+	baseDir string
+
 	// Storage interface.
 	storage storage.Storage
 
 	// Manager service clent.
 	managerClient managerclient.V1
+
+	// Graphsage model directory.
+	graphsageDir string
 }
 
 // New returns a new Training.
-func New(cfg *config.Config, managerClient managerclient.V1, storage storage.Storage) Training {
+func New(cfg *config.Config, baseDir string, managerClient managerclient.V1, storage storage.Storage) Training {
 	return &training{
 		config:        cfg,
+		baseDir:       baseDir,
 		storage:       storage,
 		managerClient: managerClient,
+		graphsageDir:  fmt.Sprintf("%s/%s", baseDir, GraphsageBaseModel),
 	}
 }
 
