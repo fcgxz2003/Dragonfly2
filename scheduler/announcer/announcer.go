@@ -23,8 +23,6 @@ import (
 	"io"
 	"time"
 
-	"golang.org/x/sync/errgroup"
-
 	managerv2 "github.com/fcgxz2003/api/v2/pkg/apis/manager/v2"
 	trainerv1 "github.com/fcgxz2003/api/v2/pkg/apis/trainer/v1"
 
@@ -151,16 +149,7 @@ func (a *announcer) train() error {
 		return err
 	}
 
-	eg := errgroup.Group{}
-	eg.Go(func() error {
-		return a.uploadDownloadToTrainer(stream)
-	})
-
-	eg.Go(func() error {
-		return a.uploadNetworkTopologyToTrainer(stream)
-	})
-
-	if err := eg.Wait(); err != nil {
+	if err := a.uploadDownloadToTrainer(stream); err != nil {
 		return err
 	}
 
@@ -211,9 +200,6 @@ func (a *announcer) uploadNetworkTopologyToTrainer(stream trainerv1.Trainer_Trai
 		return err
 	}
 	defer readCloser.Close()
-
-	logger.Info(a.config.Server.Host)
-	logger.Info(a.config.Server.AdvertiseIP.String())
 
 	buf := make([]byte, defaultUploadBufferSize)
 	for {
