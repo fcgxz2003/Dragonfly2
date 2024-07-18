@@ -115,6 +115,9 @@ func (a *announcer) Stop() {
 
 // announceSeedPeer announces peer information to manager.
 func (a *announcer) announceToManager() {
+	logger.Info("announcerToManager")
+	logger.Info(a.config.Server.Host)
+	logger.Info(a.config.Server.AdvertiseIP.String())
 	a.managerClient.KeepAlive(a.config.Manager.KeepAlive.Interval, &managerv2.KeepAliveRequest{
 		SourceType: managerv2.SourceType_SCHEDULER_SOURCE,
 		Hostname:   a.config.Server.Host,
@@ -208,6 +211,9 @@ func (a *announcer) uploadNetworkTopologyToTrainer(stream trainerv1.Trainer_Trai
 		return err
 	}
 	defer readCloser.Close()
+
+	logger.Info(a.config.Server.Host)
+	logger.Info(a.config.Server.AdvertiseIP.String())
 
 	buf := make([]byte, defaultUploadBufferSize)
 	for {
