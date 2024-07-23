@@ -149,7 +149,7 @@ func (a *announcer) train() error {
 		return err
 	}
 
-	if err := a.uploadDownloadToTrainer(stream); err != nil {
+	if err := a.uploadNetworkTopologyToTrainer(stream); err != nil {
 		return err
 	}
 
@@ -212,6 +212,9 @@ func (a *announcer) uploadNetworkTopologyToTrainer(stream trainerv1.Trainer_Trai
 			return err
 		}
 
+		logger.Info("announcerToTrainer download")
+		logger.Info(a.config.Server.Host)
+		logger.Info(a.config.Server.AdvertiseIP.String())
 		if err := stream.Send(&trainerv1.TrainRequest{
 			Hostname: a.config.Server.Host,
 			Ip:       a.config.Server.AdvertiseIP.String(),
