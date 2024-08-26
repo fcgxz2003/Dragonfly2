@@ -1008,6 +1008,7 @@ func (pt *peerTaskConductor) updateMetadata(piecePacket *commonv1.PiecePacket) {
 
 func (pt *peerTaskConductor) initDownloadPieceWorkers(pieceRequestQueue PieceDispatcher) {
 	count := 4
+	logger.Info("init download piece workers: 4")
 	for i := int32(0); i < int32(count); i++ {
 		go pt.downloadPieceWorker(i, pieceRequestQueue)
 	}
@@ -1041,6 +1042,9 @@ func (pt *peerTaskConductor) waitFirstPeerPacket(done chan bool) {
 }
 
 func (pt *peerTaskConductor) downloadPieceWorker(id int32, requests PieceDispatcher) {
+	logger.Info("downloadPieceWorker")
+	logger.Info("id")
+	logger.Info(requests)
 	for {
 		request, err := requests.Get()
 		if errors.Is(err, ErrNoValidPieceTemporarily) {

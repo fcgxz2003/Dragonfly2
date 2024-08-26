@@ -16,7 +16,11 @@
 
 package util
 
-import "math"
+import (
+	"math"
+
+	logger "d7y.io/dragonfly/v2/internal/dflog"
+)
 
 const (
 	// DefaultPieceSize 4M
@@ -40,10 +44,12 @@ func ComputePieceSize(length int64) uint32 {
 	if mpSize > DefaultPieceSizeLimit {
 		return DefaultPieceSizeLimit
 	}
+	logger.Infof("ComputerPieceSize: %d", uint32(mpSize))
 	return uint32(mpSize)
 }
 
 // ComputePieceCount returns piece count with given length and pieceSize
 func ComputePieceCount(length int64, pieceSize uint32) int32 {
+	logger.Infof("ComputePieceCount: %d", int32(math.Ceil(float64(length)/float64(pieceSize))))
 	return int32(math.Ceil(float64(length) / float64(pieceSize)))
 }
