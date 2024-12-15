@@ -26,7 +26,7 @@ import (
 	"golang.org/x/net/ipv4"
 )
 
-func SendTracertMsg(dst net.IPAddr, ttl int) (int64, icmp.Type, net.Addr, error) {
+func SendTracertMsg(dst net.IPAddr, ttl int) (time.Duration, icmp.Type, net.Addr, error) {
 	c, err := net.ListenPacket("ip4:1", "0.0.0.0")
 	if err != nil {
 		return 0, nil, nil, err
@@ -86,48 +86,33 @@ func SendTracertMsg(dst net.IPAddr, ttl int) (int64, icmp.Type, net.Addr, error)
 		return 0, nil, nil, err
 	}
 
-	rtt := time.Since(begin).Milliseconds()
+	rtt := time.Since(begin)
 	return rtt, rm.Type, peer, nil
 }
 
-func Tracert4(host string, dst net.IPAddr, maxhoop int) ([]int64, []net.Addr, error) {
-	// names, _ := net.LookupAddr(dst.IP.String())
-	// if names == nil {
-	// 	names = append(names, host)
-	// }
-	// fmt.Printf("\n通过最多 %v 个跃点跟踪\n到 %v [%s] 的路由:\n\n", maxhoop, names[0], dst.IP)
-
-	var (
-		rtts  []int64
-		peers []net.Addr
-	)
-
+func Tracert4(dst net.IPAddr, maxhoop int) (time.Duration, error) {
+	var rtt_ time.Duration
 ICMP:
 	for i := 1; i <= maxhoop; i++ {
 		rtt, icmptype, peer, err := SendTracertMsg(dst, i)
 		if err != nil {
-			return rtts, peers, err
+			return 0, err
 		}
 
 		switch icmptype {
 		case ipv4.ICMPTypeTimeExceeded:
-			names, _ := net.LookupAddr(peer.String())
-			if names != nil {
-				rtts = append(rtts, rtt)
-				peers = append(peers, peer)
-			}
-
 			continue ICMP
 		case ipv4.ICMPTypeEchoReply:
-			names, _ := net.LookupAddr(peer.String())
-			if names != nil {
-				rtts = append(rtts, rtt)
-				peers = append(peers, peer)
+			_, err := net.LookupAddr(peer.String())
+			if err != nil {
+				return 0, err
 			}
-
+			rtt_ = rtt
 			break ICMP
+		default:
+			continue ICMP
 		}
 	}
 
-	return rtts, peers, nil
+	return rtt_, nil
 }

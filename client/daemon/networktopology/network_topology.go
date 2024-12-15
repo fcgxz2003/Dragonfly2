@@ -21,6 +21,7 @@ package networktopology
 import (
 	"context"
 	"io"
+	"net"
 	"sync"
 	"time"
 
@@ -32,7 +33,7 @@ import (
 
 	"d7y.io/dragonfly/v2/client/config"
 	logger "d7y.io/dragonfly/v2/internal/dflog"
-	"d7y.io/dragonfly/v2/pkg/net/ping"
+	"d7y.io/dragonfly/v2/pkg/net/traceroute"
 	schedulerclient "d7y.io/dragonfly/v2/pkg/rpc/scheduler/client"
 )
 
@@ -164,7 +165,16 @@ func (nt *networkTopology) pingHosts(destHosts []*v1.Host) ([]*schedulerv1.Probe
 		go func(destHost *v1.Host) {
 			defer wg.Done()
 
-			stats, err := ping.Ping(destHost.Ip)
+			var destIP net.IPAddr
+			ips, _ := net.LookupIP(destHost.Ip)
+			for _, ip := range ips {
+				if ip.To4() != nil {
+					destIP.IP = ip
+					break
+				}
+			}
+
+			rtt, err := traceroute.Tracert4(destIP, 30)
 			if err != nil {
 				failedProbes = append(failedProbes, &schedulerv1.FailedProbe{
 					Host: &v1.Host{
@@ -192,7 +202,7 @@ func (nt *networkTopology) pingHosts(destHosts []*v1.Host) ([]*schedulerv1.Probe
 					Location:     destHost.Location,
 					Idc:          destHost.Idc,
 				},
-				Rtt:       durationpb.New(stats.AvgRtt),
+				Rtt:       durationpb.New(rtt),
 				CreatedAt: timestamppb.New(time.Now()),
 			})
 		}(destHost)
